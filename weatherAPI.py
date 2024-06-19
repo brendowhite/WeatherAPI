@@ -12,15 +12,15 @@ import requests
 ## This function requests the weather data from the weather API
 ## It requests 3 paramters - latitude, longitude and the API key
 
+#app = Flask(__name__)
+API_KEY = 'insert weather api key'
 
-
-
-def getWeatherData(latitude, longitude, api_key):
+def getWeatherData(latitude, longitude):
     base_url = "insert API site here http:// ..."
     params = {
         'latitude' : latitude,
         'longitude' : longitude,
-        'applicaton_ID' : api_key,
+        'applicaton_ID' : API_KEY,
         'units' : 'metric'  # uses metric measurements. Substitute 'metric' with 'imperial' for Fahrenheit
     }
 
@@ -35,18 +35,35 @@ def getWeatherData(latitude, longitude, api_key):
             ['temperature'],
             'humidity': data['main']
             ['humidity']
-
-            return weather_information
         }
-
-
-    return response.json
-
-
-API_KEY = 'weather api key goes here'
-app = Flask(__name__)
+        return weather_information
+    else: 
+            return {'error': data.get('message', 'Error fetching weather data')
+        }
 
 
 def weather():
     latitude = request.args.get('latitude')
     longitude = request.args.get('longitude')
+
+    if not latitude or not longitude :
+         return jsonify({'error':'Latitude and Longitude parameters are required'}), 400
+    
+    try:
+         latitude = float(latitude)
+         longitude = float(longitude)
+    except ValueError:
+         return jsonify({'error': 'Invalid latitude or longitude values'}), 400
+    
+    
+    weather_data = getWeatherData(latitude, longitude, API_KEY)
+
+    return jsonify(weather_data)
+
+
+
+
+
+
+
+
