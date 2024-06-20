@@ -6,96 +6,74 @@
 ## Temperature (current and predictive hourly for 24 hours ahead), humidity (current and predictive hourly for 24 hours ahead), dew point (calculated),
 ## Enthalpy, Max and average for the next 24 hours for each parameter...
 
+# Import necessary libraries
 from flask import Flask, request, jsonify
 import requests
-import math
 import os
+import math
+from datetime import datetime
 
 app = Flask(__name__)
 
 WEATHER_API_KEY = '0d5d2cfed28b5145804a9901a16c2b40'
 
-
-# Function to get the weather based on latitude and longitude
-
-def getWeatherData(latitude, longitude): #api_key):
-    
-    # This will construct the query URL that relates to the API selected
-    url = f'http://api.openweathermap.org/data/2.5/forecast?lat={latitude}&lon{longitude}&units=metric&appid={WEATHER_API_KEY}'
-    response = requests.get(url)
-    data = response.json()
-
-    weather_data = []
-    for entry in data['list'][:8]: # can only collect next 24 hours in 3 hour intervals with this api, haven't been able to find a better option that is free...
-        weather_data.append({
-            'time': entry['dt_txt'],
-            'temperature': entry['main']['temp'],
-            'humidity': entry['main']['humidity']                 
-        })
-
-        return weather_data
-
-
-# function that calculates the dew point
-
-def dewPointCalc(temp, humidity):
-    a = 17.27 # magnus coefficients a and b
+# Function to calculate dew point
+def dew_point_calc(temp, humidity):
+    a = 17.27
     b = 237.7
     alpha = ((a * temp) / (b + temp)) + math.log(humidity / 100)
-    dewPoint = (b * alpha) / (a - alpha)
-    return dewPoint
+    dew_point = (b * alpha) / (a - alpha)
+    return dew_point
 
-# function that calculates the enthalpy
-# NEEDS TO BE VERIFIED ONLINE #
-def enthalpyCalc(temp, humidity):
-    dew_Point = dewPointCalc(temp, humidity)
+# Function to calculate enthalpy
+def enthalpy_calc(temp, humidity):
+    dew_point = dew_point_calc(temp, humidity)
     h = 1.006 * temp
     latent_heat = 2501
-    specific_humidity = 0.622 * (humidity/100) * 6.112 * math.exp((17.67 * dew_Point) / (243.5 + dew_Point)) / (1013.25 - (humidity / 100) * 6.112 * math.exp((17.67 * dew_Point) / (243.5 + dew_Point)))
-    
+    specific_humidity = 0.622 * (humidity / 100) * 6.112 * math.exp((17.67 * dew_point) / (243.5 + dew_point)) / (1013.25 - (humidity / 100) * 6.112 * math.exp((17.67 * dew_point) / (243.5 + dew_point)))
     enthalpy = h + (latent_heat * specific_humidity)
-
     return enthalpy
 
-# Function that calculates the average and maximum temperature
-
-def avgAndMaxTempCalc(weather_data):
-    temperatures = [entry['temperature']
-                    for entry in weather_data]
-    avg_temp = sum(temperatures) / len(temperatures)
-    max_temp = max(temperatures)
-    return avg_temp, max_temp
-
-
-@app.route('/weather', methods=['get'])
-def extractWeatherMetrics():
-    api_key = os.getenv(WEATHER_API_KEY)
+@app.route('/weather', methods=['GET'])
+def get_weather():
     latitude = request.args.get('lat')
     longitude = request.args.get('lon')
 
-    if not api_key:
-        return jsonify({"error" : "Weather API Key is not found"}), 500
-    
     if not latitude or not longitude:
         return jsonify({"error": "Latitude and longitude are required"}), 400
-    
-    weather_data = getWeatherData(latitude, longitude)
-    
-    for entry in weather_data:
-        entry['dew point'] = dewPointCalc(entry['temperature'], entry['humidity'])
-        entry['enthalpy'] = enthalpyCalc(entry['temperature'], entry['humidity'])
 
-        avg_temp, max_temp = avgAndMaxTempCalc(weather_data)
+    url = f'http://api.openweathermap.org/data/2.5/forecast?lat={latitude}&lon={longitude}&units=metric&appid={WEATHER_API_KEY}'
+    response = requests.get(url)
+    data = response.json()
 
-        response = {'weather data' : weather_data,
-                   'average temperature' : avg_temp,
-                   'maximum temperature' : max_temp
-                   }
-        
-        return jsonify(response)
-    
+    try:
+        hourly_data = data['list']
+        hourly_temperatures = [hour['main']['temp'] for hour in hourly_data]
+        max_temperature = max(hourly_temperatures)
+        average_temperature = sum(hourly_temperatures) / len(hourly_temperatures)
+        current_temperature = hourly_data[0]['main']['temp']
+        humidity = hourly_data[0]['main']['humidity']
+        dew_point = dew_point_calc(current_temperature, humidity)
+        enthalpy = enthalpy_calc(current_temperature, humidity)
+
+        # Extract temperature and time for the next 24 hours
+        hourly_temperature_time = [(hour['main']['temp'], datetime.strptime(hour['dt_txt'], '%Y-%m-%d %H:%M:%S').strftime('%d/%m/%Y %H:%M:%S')) for hour in hourly_data]
+
+        return jsonify({
+            "Temperature (C)": current_temperature,
+            "Humidity (%)": humidity,
+            "Average Temperature (C) (24-hour period)": average_temperature,
+            "Maximum Temperature (C) (24-hour period)": max_temperature,
+            "Maximum Humidity (24-hour period) (C)": max(h['main']['humidity'] for h in hourly_data),
+            "Dew Point": dew_point,
+            "Enthalpy": enthalpy,
+            "Hourly Temperature Timestamped": hourly_temperature_time
+        })
+    except KeyError:
+        return jsonify({"error": "Weather data not available"}), 500
+
 if __name__ == '__main__':
-    app.run(debug=True, host = '0.0.0.0')
+    app.run(debug=True, host='0.0.0.0')
 
  
 
