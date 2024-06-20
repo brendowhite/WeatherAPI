@@ -5,7 +5,7 @@
 ## Included aspects of weather that will be gathered is
 ## Temperature (current and predictive hourly for 24 hours ahead), humidity (current and predictive hourly for 24 hours ahead), dew point (calculated),
 ## Enthalpy, Max and average for the next 24 hours for each parameter...
-
+ 
 # Import necessary modules
 from flask import Flask, request, jsonify
 import requests
@@ -36,7 +36,7 @@ def enthalpyCalc(temp, humidity):
     return enthalpy
 
 # Function to fetch initial weather data
-def fetch_initial_weather_data():
+def fetchWeatherData():
     global hourly_data, max_temperature, average_temperature, current_temperature, humidity, dew_point, enthalpy
     url = f'http://api.openweathermap.org/data/2.5/forecast?lat=49.2827&lon=-123.1207&units=metric&appid={WEATHER_API_KEY}'
     response = requests.get(url)
@@ -56,7 +56,7 @@ def fetch_initial_weather_data():
 
 # Create a scheduler to update weather data every 3 hours
 scheduler = BackgroundScheduler()
-scheduler.add_job(fetch_initial_weather_data, 'interval', hours=3)
+scheduler.add_job(fetchWeatherData, 'interval', seconds=10)
 scheduler.start()
 
 # Define a route to get weather data
@@ -85,14 +85,8 @@ def get_weather():
 
 if __name__ == '__main__':
     # Fetch initial weather data
-    fetch_initial_weather_data()
+    fetchWeatherData()
     app.run(debug=True, host='0.0.0.0')
-
-
- 
-
-
-
 
 
 
