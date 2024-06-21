@@ -6,16 +6,25 @@
 ## Temperature (current and predictive hourly for 24 hours ahead), humidity (current and predictive hourly for 24 hours ahead), dew point (calculated),
 ## Enthalpy, Max and average for the next 24 hours for each parameter...
  
+## The intention of this file is to call weather API information
+
+##  HERE ARE THE DESIRED SPECIFICATIONS FOR THE API
+
+## Included aspects of weather that will be gathered is
+## Temperature (current and predictive hourly for 24 hours ahead), humidity (current and predictive hourly for 24 hours ahead), dew point (calculated),
+## Enthalpy, Max and average for the next 24 hours for each parameter...
+ 
 # Import necessary modules
 from flask import Flask, request, jsonify
 import requests
 import math
 from datetime import datetime, timedelta
-from apscheduler.schedulers.background import BackgroundScheduler
+from apscheduler.schedulers.background import BackgroundScheduler # have attempted scheduling, need to revisit this
+#from bacpypes.object import AnalogInputObject, AnalogValueObject
 
 app = Flask(__name__)
 
-# Replace with your OpenWeatherMap API key
+# OpenWeatherMap API key (needs to not be hard coded so that the user can input it themselves)
 WEATHER_API_KEY = '0d5d2cfed28b5145804a9901a16c2b40'
 
 # Function to calculate dew point
@@ -65,16 +74,18 @@ def get_weather():
         # Fetch weather data using the provided latitude and longitude
         fetchWeatherData(lat, lon)
 
-        # Calculate hourly temperature timestamps
+        # Calculate hourly temperature and humidity timestamps
         hourly_temperature_time = []
+        hourly_humidity_time = []
         current_time = datetime.now()
 
         for i, hour in enumerate(hourly_data):
             # Calculate the timestamp for each hour (starting from the current time)
-            timestamp = current_time + timedelta(hours=i * 3)
-            formatted_timestamp = timestamp.strftime('%d/%m/%Y %H:%M:%S')
+            # timestamp = current_time + timedelta(hours=i * 3)
+            # formatted_timestamp = timestamp.strftime('%d/%m/%Y %H:%M:%S')
             time_label = f"Current time + {i * 3} hours"
             hourly_temperature_time.append((hour['main']['temp'], time_label))
+            hourly_humidity_time.append((hour['main']['humidity'], time_label))
 
         return jsonify({
             "Current Time": current_time.strftime('%d/%m/%Y %H:%M:%S'),
@@ -85,7 +96,8 @@ def get_weather():
             "Maximum Humidity (24-hour period) (%)": max(h['main']['humidity'] for h in hourly_data) if hourly_data else None,
             "Dew Point": dew_point,
             "Enthalpy": enthalpy,
-            "3 Hourly Temperatures Timestamped": hourly_temperature_time
+            "3 Hourly Temperatures (C) Timestamped": hourly_temperature_time,
+            "3 Hourly Humidity (%) Timestamped": hourly_humidity_time
         })
     except Exception as e:
         return jsonify({"error": f"Error fetching weather data: {str(e)}"}), 500
@@ -94,60 +106,28 @@ def get_weather():
 if __name__ == '__main__':
     app.run(debug=True, host='0.0.0.0')
 
-# CODE GRAVEYARD #
 
-#app = Flask(__name__)
-# API_KEY = 'insert weather api key'
-
-# def getWeatherData(latitude, longitude):
-#     base_url = "insert API site here http:// ..."
-#     params = {
-#         'latitude' : latitude,
-#         'longitude' : longitude,
-#         'applicaton_ID' : API_KEY,
-#         'units' : 'metric'  # uses metric measurements. Substitute 'metric' with 'imperial' for Fahrenheit
-#     }
-
-#     response = requests.get(base_url, params=params)
-
-#     data = response.json()
-
-#     if response.status_code == 200:
-#         # Extract temperature and humidity
-#         weather_information = {
-#             'temperature': data['main']
-#             ['temperature'],
-#             'humidity': data['main']
-#             ['humidity']
-#         }
-#         return weather_information
-#     else: 
-#             return {'error': data.get('message', 'Error fetching weather data')
-#         }
+# Need to still find and use BOM XML data to compare and interpolate the data
 
 
-# def weather():
-#     latitude = request.args.get('latitude')
-#     longitude = request.args.get('longitude')
+# Begin BACnet integration attempt
 
-#     if not latitude or not longitude :
-#          return jsonify({'error':'Latitude and Longitude parameters are required'}), 400
-    
-#     try:
-#          latitude = float(latitude)
-#          longitude = float(longitude)
-#     except ValueError:
-#          return jsonify({'error': 'Invalid latitude or longitude values'}), 400
-    
-    
-#     weather_data = getWeatherData(latitude, longitude, API_KEY)
+# create some BACnet objects 
 
-#     return jsonify(weather_data)
+# Define BACnet object IDs
+# TEMPERATURE_OBJECT_ID = (1, 0)
+# HUMIDITY_OBJECT_ID = (2, 0)
+
+# # Create BACnet objects
+# temperature_object = AnalogValueObject(objectIdentifier=TEMPERATURE_OBJECT_ID, presentValue=current_temperature)
+# humidity_object = AnalogValueObject(objectIdentifier=HUMIDITY_OBJECT_ID, presentValue=humidity)
+
+# # Update the BACnet objects with the calculated values
+# temperature_object.update()
+# humidity_object.update()
 
 
 
+# Techbeast.org youtube
 
-
-
-
-
+# latitude and longitude for 123 epping rd -33.784183, 151.118332
