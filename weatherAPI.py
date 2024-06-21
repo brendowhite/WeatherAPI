@@ -43,7 +43,7 @@ def fetchWeatherData(lat, lon):
     data = response.json()
 
     try:
-        hourly_data = data['list'][0:8]
+        hourly_data = data['list'][0:9]
         hourly_temperatures = [hour['main']['temp'] for hour in hourly_data]
         max_temperature = max(hourly_temperatures)
         average_temperature = sum(hourly_temperatures) / len(hourly_temperatures)
@@ -70,21 +70,22 @@ def get_weather():
         current_time = datetime.now()
 
         for i, hour in enumerate(hourly_data):
-            # Calculate the timestamp for each hour (starting from 3 hours from now - this will print as HH:MM:SS)
-            timestamp = current_time + timedelta(hours=(i + 1) * 3)
+            # Calculate the timestamp for each hour (starting from the current time)
+            timestamp = current_time + timedelta(hours=i * 3)
             formatted_timestamp = timestamp.strftime('%d/%m/%Y %H:%M:%S')
-            hourly_temperature_time.append((hour['main']['temp'], formatted_timestamp))
+            time_label = f"Current time + {i * 3} hours"
+            hourly_temperature_time.append((hour['main']['temp'], time_label))
 
         return jsonify({
             "Current Time": current_time.strftime('%d/%m/%Y %H:%M:%S'),
-            "Current Temperature (C)": current_temperature,
-            "Current Humidity (%)": humidity,
+            "Temperature (C)": current_temperature,
+            "Humidity (%)": humidity,
             "Average Temperature (C) (24-hour period)": average_temperature,
             "Maximum Temperature (C) (24-hour period)": max_temperature,
             "Maximum Humidity (24-hour period) (%)": max(h['main']['humidity'] for h in hourly_data) if hourly_data else None,
             "Dew Point": dew_point,
             "Enthalpy": enthalpy,
-            "Hourly Temperature Timestamped": hourly_temperature_time
+            "3 Hourly Temperatures Timestamped": hourly_temperature_time
         })
     except Exception as e:
         return jsonify({"error": f"Error fetching weather data: {str(e)}"}), 500
@@ -92,7 +93,6 @@ def get_weather():
 
 if __name__ == '__main__':
     app.run(debug=True, host='0.0.0.0')
-
 
 # CODE GRAVEYARD #
 
