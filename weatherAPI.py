@@ -14,18 +14,51 @@
 ## Temperature (current and predictive hourly for 24 hours ahead), humidity (current and predictive hourly for 24 hours ahead), dew point (calculated),
 ## Enthalpy, Max and average for the next 24 hours for each parameter...
  
-# Import necessary modules
+# API request related libraries
 from flask import Flask, request, jsonify
 import requests
 import math
-from datetime import datetime, timedelta
-from apscheduler.schedulers.background import BackgroundScheduler # have attempted scheduling, need to revisit this
+from datetime import datetime
+#from apscheduler.schedulers.background import BackgroundScheduler # have attempted scheduling, need to revisit this
+
+# BACpypes and BAC0 related libraries
+import BAC0
+from BAC0.core.devices.local.object import ObjectFactory
+from bacpypes.object import ScheduleObject
+from BAC0.core.devices.local.models import analog_input
+from BAC0 import lite, connect
 #from bacpypes.object import AnalogInputObject, AnalogValueObject
+
+
 
 app = Flask(__name__)
 
 # OpenWeatherMap API key (needs to not be hard coded so that the user can input it themselves)
 WEATHER_API_KEY = '0d5d2cfed28b5145804a9901a16c2b40'
+
+# # We want to make this API function as a BACnet device. The weather components will be analog output objects 
+def defineBACnetObjects(new_device):
+    print ("you are here")
+    ObjectFactory.clear_objects()
+    new_device = BAC0.lite(ip="172.20.64.1/24", port='47808', deviceId='1110')
+
+    new_objects = analog_input(
+        instance = 10,
+        name = "Temperature",
+        properties = {"units":"degreesCelsius"},
+        description = "Outside air temp.",
+        presentValue = current_temperature
+    )
+    analog_input(
+        instance = 11,
+        name = "Humidity",
+        properties = {"Value":" %"},
+        description = "Water vapour in air",
+        presentValue = humidity
+    )
+
+    new_objects.add_objects_to_application(new_device)
+    return new_device
 
 # Function to calculate dew point
 def dewPointCalc(temp, humidity):
@@ -79,6 +112,11 @@ def get_weather():
         hourly_humidity_time = []
         current_time = datetime.now()
 
+        print (current_temperature)
+        print (humidity)
+        print (dew_point)
+        print (enthalpy)
+
         for i, hour in enumerate(hourly_data):
             # Calculate the timestamp for each hour (starting from the current time)
             # timestamp = current_time + timedelta(hours=i * 3)
@@ -105,29 +143,14 @@ def get_weather():
 
 if __name__ == '__main__':
     app.run(debug=True, host='0.0.0.0')
+    defineBACnetObjects()
 
+# device1 = connect(ip="172.20.64.1/24", port='47808', deviceId='1110')
 
-# Need to still find and use BOM XML data to compare and interpolate the data
-
-
-# Begin BACnet integration attempt
-
-# create some BACnet objects 
-
-# Define BACnet object IDs
-# TEMPERATURE_OBJECT_ID = (1, 0)
-# HUMIDITY_OBJECT_ID = (2, 0)
-
-# # Create BACnet objects
-# temperature_object = AnalogValueObject(objectIdentifier=TEMPERATURE_OBJECT_ID, presentValue=current_temperature)
-# humidity_object = AnalogValueObject(objectIdentifier=HUMIDITY_OBJECT_ID, presentValue=humidity)
-
-# # Update the BACnet objects with the calculated values
-# temperature_object.update()
-# humidity_object.update()
-
-
+# defineBACnetObjects(device1)
 
 # Techbeast.org youtube
 
 # latitude and longitude for 123 epping rd -33.784183, 151.118332
+
+# port 47808 (BAC0)
