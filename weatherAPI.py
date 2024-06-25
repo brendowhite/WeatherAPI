@@ -1,3 +1,4 @@
+
 ## The intention of this file is to call weather API information
 
 ##  HERE ARE THE DESIRED SPECIFICATIONS FOR THE API
@@ -110,61 +111,11 @@ def get_weather():
     except Exception as e:
         return jsonify({"error": f"Error fetching weather data: {str(e)}"}), 500
 
-# Define BACnet objects
-def defineBACnetObjects(device):
-    ObjectFactory.clear_objects()
-    global current_temperature, humidity, dew_point, enthalpy
 
-    newObjects = analog_input(
-        instance=0,
-        name="Temperature",
-        presentValue=current_temperature,
-        units="degreesCelsius",
-        description="Outside air temperature"
-    )
-    analog_input(
-        instance=1,
-        name="Humidity",
-        presentValue=humidity,
-        units="percent",
-        description="Relative Humidity"
-    )
-
-    analog_input(
-        instance=2,
-        name="Dew Point",
-        presentValue=dew_point,
-        units="degreesCelsius",
-        description="Dew Point Temperature"
-    )
-
-    analog_input(
-        instance=3,
-        name="Enthalpy",
-        presentValue=enthalpy,
-        units="kilojoulesPerKilogram",
-        description="Specific Enthalpy"
-    )
-
-    return newObjects.add_objects_to_application(device)
-
-# # Create and configure BACnet device
-device1 = connect(ip='192.168.1.89/24', port='47808', deviceId=1110)
-# # Define BACnet objects with initial values
-defineBACnetObjects(device1)
-
-# # Fetch initial weather data to set BACnet object values
-# fetchWeatherData(lat=-33.784183, lon=151.118332)
-
-# Periodically update BACnet object values with latest weather data
-# def update_bacnet_objects():
-#     global current_temperature, humidity, dew_point, enthalpy
-#     bacnet_device.this_application.get_object_name("Temperature").presentValue = current_temperature
-#     bacnet_device.this_application.get_object_name("Humidity").presentValue = humidity
-#     bacnet_device.this_application.get_object_name("Dew Point").presentValue = dew_point
-#     bacnet_device.this_application.get_object_name("Enthalpy").presentValue = enthalpy
 
 if __name__ == '__main__':
-    app.run(debug=True, host='0.0.0.0')
+
+    app.run(debug=True, host='localhost')
+
 
 
