@@ -11,6 +11,28 @@ import threading
 WEATHER_API_KEY = '0d5d2cfed28b5145804a9901a16c2b40'
 current_time = datetime.datetime.now()
 
+# Global variables for weather data
+current_temperature = 0
+humidity = 0
+current_dew_point = 0
+current_enthalpy = 0
+hourly_temperatures = []
+hourly_humidity = []
+max_temperature = 0
+average_temperature = 0
+lat = None
+lon = None
+
+
+# Function to set latitude and longitude
+def set_location():
+    global lat, lon
+    try:
+        lat = float(input("Enter latitude: "))
+        lon = float(input("Enter longitude: "))
+    except ValueError:
+        print("Invalid input! Please enter valid numeric values for latitude and longitude.")
+
 # Function to calculate dew point
 def dewPointCalc(temp, humidity):
     a = 17.27
@@ -28,18 +50,16 @@ def enthalpyCalc(temp, humidity):
     enthalpy = h + (latent_heat * specific_humidity)
     return enthalpy
 
-def fetchWeatherData():
+def fetchWeatherData(lat, lon):
     # define global variables to be used in updating analog_values on BACnet device
     global current_temperature, humidity, current_dew_point, current_enthalpy, hourly_temperatures, hourly_humidity, max_temperature, average_temperature
     global dew_point3hr, dew_point6hr, dew_point9hr, dew_point12hr, dew_point15hr, dew_point18hr, dew_point21hr, dew_point24hr
     global enthalpy3hr, enthalpy6hr, enthalpy9hr, enthalpy12hr, enthalpy15hr, enthalpy18hr, enthalpy21hr, enthalpy24hr
-    try:
-        lat = float(input("Enter latitude: "))
-        lon = float(input("Enter longitude: "))
-        # api_key = float(input("Enter your OpenWeatherMap API key: "))
-    except ValueError:
-        print("Invalid input! Please enter valid numeric values for latitude and longitude.")
+    if lat is None or lon is None:
+        print("Latitude and/or longitude not set. Please set location first.")
         return
+    
+
     # Open Weather Map API with 3 arguments, latitude, longitude and weather api token
     url = f'http://api.openweathermap.org/data/2.5/forecast?lat={lat}&lon={lon}&units=metric&appid={WEATHER_API_KEY}'
     response = requests.get(url)
@@ -75,47 +95,34 @@ def fetchWeatherData():
         enthalpy21hr = enthalpyCalc(hourly_temperatures[7], hourly_humidity[7])
         enthalpy24hr = enthalpyCalc(hourly_temperatures[8], hourly_humidity[8])
 
-        # Logic to refresh the weather data every 3 hours
-        while True:
-            # time.sleep(10)  # Wait for 3 hours
-            response = requests.get(url)
-            data = response.json()
-
-            hourly_data = data['list'][0:9]
-            hourly_temperatures = [hour['main']['temp'] for hour in hourly_data]
-            hourly_humidity = [hour['main']['humidity'] for hour in hourly_data]
-            current_temperature = data['list'][0]['main']['temp']
-            humidity = data['list'][0]['main']['humidity']
-            current_dew_point = dewPointCalc(current_temperature, humidity)
-            dew_point3hr = dewPointCalc(hourly_temperatures[1], hourly_humidity[1])
-            dew_point6hr = dewPointCalc(hourly_temperatures[2], hourly_humidity[2])
-            dew_point9hr = dewPointCalc(hourly_temperatures[3], hourly_humidity[3])
-            dew_point12hr = dewPointCalc(hourly_temperatures[4], hourly_humidity[4])
-            dew_point15hr = dewPointCalc(hourly_temperatures[5], hourly_humidity[5])
-            dew_point18hr = dewPointCalc(hourly_temperatures[6], hourly_humidity[6])
-            dew_point21hr = dewPointCalc(hourly_temperatures[7], hourly_humidity[7])
-            dew_point24hr = dewPointCalc(hourly_temperatures[8], hourly_humidity[8])    
-            current_enthalpy = enthalpyCalc(current_temperature, humidity)
-            enthalpy3hr = enthalpyCalc(hourly_temperatures[1], hourly_humidity[1])
-            enthalpy6hr = enthalpyCalc(hourly_temperatures[2], hourly_humidity[2])
-            enthalpy9hr = enthalpyCalc(hourly_temperatures[3], hourly_humidity[3])
-            enthalpy12hr = enthalpyCalc(hourly_temperatures[4], hourly_humidity[4])
-            enthalpy15hr = enthalpyCalc(hourly_temperatures[5], hourly_humidity[5])
-            enthalpy18hr = enthalpyCalc(hourly_temperatures[6], hourly_humidity[6])
-            enthalpy21hr = enthalpyCalc(hourly_temperatures[7], hourly_humidity[7])
-            enthalpy24hr = enthalpyCalc(hourly_temperatures[8], hourly_humidity[8])
+        print(f"Current Temperature: {current_temperature} °C")
+        print(f"Current Humidity: {humidity} %")
+        print(f"Current Dew Point: {current_dew_point} °C")
+        print(f"Current Enthalpy: {current_enthalpy} kJ/kg")
 
     except KeyError:
         print("Error fetching initial weather data")
-        
 
 # fetching weather data based on user input arguments 
-fetchWeatherData()
+# fetchWeatherData()
 
+# # Function to fetch weather data periodically
+def fetchWeatherPeriodically():
+    while True:
+        print("Fetching weather data...")
+        fetchWeatherData(lat, lon)
+        print("Weather data fetched.")
+        time.sleep(30 *)  # For testing, sleep for 10 seconds instead of 3 hours
+# Create a thread for periodic weather fetching
+
+set_location()
+
+weather_thread = threading.Thread(target=fetchWeatherPeriodically)
+weather_thread.start()
 
 # # Create the virtual BACnet device below, it will include a number of different analog_values for weather metrics
 def start_device():
-    new_device = BAC0.lite(deviceId=10032)
+    new_device = BAC0.lite(deviceId=11110)
     time.sleep(1)
 
     # Analog Values
@@ -270,7 +277,4 @@ try:
         time.sleep(60)  # Wait for 60 seconds before starting a new device instance
 except Exception as e:
     print(f"Error: {e}")
-
-
-thread = threading.Thread(target=start_device)
 
