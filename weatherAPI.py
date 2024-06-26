@@ -112,7 +112,7 @@ def fetchWeatherPeriodically():
         print("Fetching weather data...")
         fetchWeatherData(lat, lon)
         print("Weather data fetched.")
-        time.sleep(30 *)  # For testing, sleep for 10 seconds instead of 3 hours
+        time.sleep(30 * 60)  # For testing, sleep for 10 seconds instead of 3 hours
 # Create a thread for periodic weather fetching
 
 set_location()
