@@ -53,7 +53,7 @@ def enthalpyCalc(temp, humidity):
 def fetchWeatherData(lat, lon):
     # define global variables to be used in updating analog_values on BACnet device
     global current_temperature, humidity, current_dew_point, current_enthalpy, hourly_temperatures, hourly_humidity, max_temperature, average_temperature, average_humidity, max_humidity
-    global dew_point3hr, dew_point6hr, dew_point9hr, dew_point12hr, dew_point15hr, dew_point18hr, dew_point21hr, dew_point24hr
+    global dew_point3hr, dew_point6hr, dew_point9hr, dew_point12hr, dew_point15hr, dew_point18hr, dew_point21hr, dew_point24hr, min_temperature, min_humidity
     global enthalpy3hr, enthalpy6hr, enthalpy9hr, enthalpy12hr, enthalpy15hr, enthalpy18hr, enthalpy21hr, enthalpy24hr
     if lat is None or lon is None:
         print("Latitude and/or longitude not set. Please set location first.")
@@ -71,11 +71,13 @@ def fetchWeatherData(lat, lon):
         hourly_temperatures = [hour['main']['temp'] for hour in hourly_data]
         hourly_humidity = [hour['main']['humidity'] for hour in hourly_data]
         max_temperature = max(hourly_temperatures)
+        min_temperature = min(hourly_temperatures)
         average_temperature = sum(hourly_temperatures) / len(hourly_temperatures)
         current_temperature = data['list'][0]['main']['temp']
         humidity = data['list'][0]['main']['humidity']
         average_humidity = sum(hourly_humidity) / len(hourly_humidity)
         max_humidity = max(hourly_humidity)
+        min_humidity = min(hourly_humidity)
 
         # Data calculated via custom functions
         current_dew_point = dewPointCalc(current_temperature, humidity)
@@ -130,14 +132,14 @@ def start_device():
     # Analog Values
     _new_objects = analog_value(
         instance=1,
-        name="Current_Temp",
+        name="Current Temperature",
         description="Current Temperature in degC", 
         presentValue=current_temperature,
         properties={"units": "degreesCelsius"},
     )
     _new_objects = analog_value(
         instance=2,
-        name="Humidity",
+        name="Current Humidity",
         description="Current Humidity in percentage",
         presentValue=humidity,
         properties={"units": "percent"},
@@ -403,9 +405,23 @@ def start_device():
     )
     _new_objects = analog_value(
         instance=40,
+        name="Minimum Humidity 24H",
+        description="Min Humidity in the next 24HR",
+        presentValue=min_humidity,
+        properties={"units":"percent"}
+    )
+    _new_objects = analog_value(
+        instance=41,
         name="Maximum Temperature 24H",
         description="Max Temperature in the next 24HR",
         presentValue=max_temperature,
+        properties={"units":"degreesCelsius"}
+    )
+    _new_objects = analog_value(
+        instance=42,
+        name="Minimum Temperature 24H",
+        description="Min Temperature in the next 24HR",
+        presentValue=min_temperature,
         properties={"units":"degreesCelsius"}
     )
 
@@ -417,12 +433,12 @@ def start_device():
 try:
     bacnet_device = start_device()
     while True:
-        
+
         # Code below will update the weather data stored inside the BACnet device every 31 minutes
         
         print("we are here")
-        bacnet_device["Current_Temp"].presentValue = current_temperature
-        bacnet_device["Humidity"].presentValue = humidity
+        bacnet_device["Current Temperature"].presentValue = current_temperature
+        bacnet_device["Current Humidity"].presentValue = humidity
         bacnet_device["Dew Point"].presentValue = current_dew_point
         bacnet_device["Enthalpy"].presentValue = current_enthalpy
 
@@ -465,7 +481,9 @@ try:
         bacnet_device["Average Humidity 24H"].presentValue=average_humidity
         bacnet_device["Average Temperature 24H"].presentValue=average_temperature
         bacnet_device["Maximum Temperature 24H"].presentValue=max_temperature
+        bacnet_device["Minimum Temperature 24H"].presentValue=min_temperature
         bacnet_device["Maximum Humidity 24H"].presentValue=max_humidity
+        bacnet_device["Minimum Humidity 24H"].presnetValue=min_humidity
 
         print("devices updated")
         time.sleep(31*60)  # Wait for 31 mins before starting a new device instance
