@@ -129,7 +129,7 @@ def start_device():
 
 
 
-    # Analog Values
+    # Analog Value creation for BACnet device. This will 
     _new_objects = analog_value(
         instance=1,
         name="Current Temperature",
