@@ -8,7 +8,6 @@ from BAC0.core.devices.local.models import (
 import datetime
 import threading
 
-WEATHER_API_KEY = '0d5d2cfed28b5145804a9901a16c2b40'
 current_time = datetime.datetime.now()
 
 # Global variables for weather data
@@ -22,6 +21,7 @@ max_temperature = 0
 average_temperature = 0
 lat = None
 lon = None
+WEATHER_API_KEY=None
 
 
 # Function to set latitude and longitude via user input
@@ -33,18 +33,31 @@ def set_location():
     except ValueError:
         print("Invalid input! Please enter valid numeric values for latitude and longitude.")
 
+# Function to set OpenWeather API key via user input
+def setApiKey():
+    global WEATHER_API_KEY
+    WEATHER_API_KEY = input("Enter your OpenWeather API key: ")
+    #'0d5d2cfed28b5145804a9901a16c2b40'
+
+def setBuildingHeight():
+    global building_height
+    building_height = float(input("Enter the height at which you want to calculate in meters: "))
+
 # Function to calculate dew point
-def dewPointCalc(temp, humidity):
+def dewPointCalc(temp, humidity, height):
+    global building_height
     a = 17.27
     b = 237.7
-    alpha = ((a * temp) / (b + temp)) + math.log(humidity / 100)
+    building_height = temp - (6.5 / 1000) * height
+    alpha = ((a * building_height) / (b + building_height)) + math.log(humidity / 100)
     dew_point = (b * alpha) / (a - alpha)
     return dew_point
 
 # Function to calculate enthalpy
-def enthalpyCalc(temp, humidity):
-    dew_point = dewPointCalc(temp, humidity)
-    h = 1.006 * temp
+def enthalpyCalc(temp, humidity, height):
+    dew_point = dewPointCalc(temp, humidity, height)
+    building_height = temp - (6.5 / 1000) * height
+    h = 1.006 * building_height
     latent_heat = 2501
     specific_humidity = 0.622 * (humidity / 100) * 6.112 * math.exp((17.67 * dew_point) / (243.5 + dew_point)) / (1013.25 - (humidity / 100) * 6.112 * math.exp((17.67 * dew_point) / (243.5 + dew_point)))
     enthalpy = h + (latent_heat * specific_humidity)
@@ -54,19 +67,19 @@ def fetchWeatherData(lat, lon):
     # define global variables to be used in updating analog_values on BACnet device
     global current_temperature, humidity, current_dew_point, current_enthalpy, hourly_temperatures, hourly_humidity, max_temperature, average_temperature, average_humidity, max_humidity
     global dew_point3hr, dew_point6hr, dew_point9hr, dew_point12hr, dew_point15hr, dew_point18hr, dew_point21hr, dew_point24hr, min_temperature, min_humidity
-    global enthalpy3hr, enthalpy6hr, enthalpy9hr, enthalpy12hr, enthalpy15hr, enthalpy18hr, enthalpy21hr, enthalpy24hr
+    global enthalpy3hr, enthalpy6hr, enthalpy9hr, enthalpy12hr, enthalpy15hr, enthalpy18hr, enthalpy21hr, enthalpy24hr, building_height
     if lat is None or lon is None:
         print("Latitude and/or longitude not set. Please set location first.")
         return
     
 
-    # Open Weather Map API with 3 arguments, latitude, longitude and weather api token
+    # Open Weather Map API with 3 arguments, latitude, longitude and weather api token. Metric by default
     url = f'http://api.openweathermap.org/data/2.5/forecast?lat={lat}&lon={lon}&units=metric&appid={WEATHER_API_KEY}'
     response = requests.get(url)
     data = response.json()
 
     try:
-        # Data pulled from the API
+        # key data pulled from the API 
         hourly_data = data['list'][0:9]
         hourly_temperatures = [hour['main']['temp'] for hour in hourly_data]
         hourly_humidity = [hour['main']['humidity'] for hour in hourly_data]
@@ -79,25 +92,25 @@ def fetchWeatherData(lat, lon):
         max_humidity = max(hourly_humidity)
         min_humidity = min(hourly_humidity)
 
-        # Data calculated via custom functions
-        current_dew_point = dewPointCalc(current_temperature, humidity)
-        dew_point3hr = dewPointCalc(hourly_temperatures[1], hourly_humidity[1])
-        dew_point6hr = dewPointCalc(hourly_temperatures[2], hourly_humidity[2])
-        dew_point9hr = dewPointCalc(hourly_temperatures[3], hourly_humidity[3])
-        dew_point12hr = dewPointCalc(hourly_temperatures[4], hourly_humidity[4])
-        dew_point15hr = dewPointCalc(hourly_temperatures[5], hourly_humidity[5])
-        dew_point18hr = dewPointCalc(hourly_temperatures[6], hourly_humidity[6])
-        dew_point21hr = dewPointCalc(hourly_temperatures[7], hourly_humidity[7])
-        dew_point24hr = dewPointCalc(hourly_temperatures[8], hourly_humidity[8])
-        current_enthalpy = enthalpyCalc(current_temperature, humidity)
-        enthalpy3hr = enthalpyCalc(hourly_temperatures[1], hourly_humidity[1])
-        enthalpy6hr = enthalpyCalc(hourly_temperatures[2], hourly_humidity[2])
-        enthalpy9hr = enthalpyCalc(hourly_temperatures[3], hourly_humidity[3])
-        enthalpy12hr = enthalpyCalc(hourly_temperatures[4], hourly_humidity[4])
-        enthalpy15hr = enthalpyCalc(hourly_temperatures[5], hourly_humidity[5])
-        enthalpy18hr = enthalpyCalc(hourly_temperatures[6], hourly_humidity[6])
-        enthalpy21hr = enthalpyCalc(hourly_temperatures[7], hourly_humidity[7])
-        enthalpy24hr = enthalpyCalc(hourly_temperatures[8], hourly_humidity[8])
+        # Data for dew point and enthalpy calculated via custom functions
+        current_dew_point = dewPointCalc(current_temperature, humidity, building_height)
+        dew_point3hr = dewPointCalc(hourly_temperatures[1], hourly_humidity[1], building_height)
+        dew_point6hr = dewPointCalc(hourly_temperatures[2], hourly_humidity[2], building_height)
+        dew_point9hr = dewPointCalc(hourly_temperatures[3], hourly_humidity[3], building_height)
+        dew_point12hr = dewPointCalc(hourly_temperatures[4], hourly_humidity[4], building_height)
+        dew_point15hr = dewPointCalc(hourly_temperatures[5], hourly_humidity[5], building_height)
+        dew_point18hr = dewPointCalc(hourly_temperatures[6], hourly_humidity[6], building_height)
+        dew_point21hr = dewPointCalc(hourly_temperatures[7], hourly_humidity[7], building_height)
+        dew_point24hr = dewPointCalc(hourly_temperatures[8], hourly_humidity[8], building_height)
+        current_enthalpy = enthalpyCalc(current_temperature, humidity, building_height)
+        enthalpy3hr = enthalpyCalc(hourly_temperatures[1], hourly_humidity[1], building_height)
+        enthalpy6hr = enthalpyCalc(hourly_temperatures[2], hourly_humidity[2], building_height)
+        enthalpy9hr = enthalpyCalc(hourly_temperatures[3], hourly_humidity[3], building_height)
+        enthalpy12hr = enthalpyCalc(hourly_temperatures[4], hourly_humidity[4], building_height)
+        enthalpy15hr = enthalpyCalc(hourly_temperatures[5], hourly_humidity[5], building_height)
+        enthalpy18hr = enthalpyCalc(hourly_temperatures[6], hourly_humidity[6], building_height)
+        enthalpy21hr = enthalpyCalc(hourly_temperatures[7], hourly_humidity[7], building_height)
+        enthalpy24hr = enthalpyCalc(hourly_temperatures[8], hourly_humidity[8], building_height)
 
         print(f"Current Temperature: {current_temperature} °C")
         print(f"Current Humidity: {humidity} %")
@@ -114,10 +127,13 @@ def fetchWeatherPeriodically():
         print("Fetching weather data...")
         fetchWeatherData(lat, lon)
         print("Weather data fetched.")
-        time.sleep(30*60)  # For testing, sleep for 10 seconds instead of 3 hours
+        time.sleep(30*60)  # sleep for 30 minutes
 
 # Use latitude and longitude from user input to fetch the updated weather on the thread
+# use api token for updated query
 set_location()
+setApiKey()
+setBuildingHeight()
 # Create a thread for periodic weather fetching
 weather_thread = threading.Thread(target=fetchWeatherPeriodically)
 weather_thread.start()
@@ -126,8 +142,6 @@ weather_thread.start()
 def start_device():
     new_device = BAC0.lite(deviceId=11110)
     time.sleep(1)
-
-
 
     # Analog Value creation for BACnet device. This will 
     _new_objects = analog_value(
@@ -432,16 +446,17 @@ def start_device():
 
 try:
     bacnet_device = start_device()
+    # run an infinite loop that updates current weather values
     while True:
 
         # Code below will update the weather data stored inside the BACnet device every 31 minutes
-        
+    # update the current weather values for temp, humidity, dew pt and enthalpy
         print("we are here")
         bacnet_device["Current Temperature"].presentValue = current_temperature
         bacnet_device["Current Humidity"].presentValue = humidity
         bacnet_device["Dew Point"].presentValue = current_dew_point
         bacnet_device["Enthalpy"].presentValue = current_enthalpy
-
+    # update the predicted temperature readings 
         bacnet_device["Predicted Temperature +3hr"].presentValue=hourly_temperatures[1]
         bacnet_device["Predicted Temperature +6hr"].presentValue=hourly_temperatures[2]
         bacnet_device["Predicted Temperature +9hr"].presentValue=hourly_temperatures[3]
@@ -450,7 +465,7 @@ try:
         bacnet_device["Predicted Temperature +18hr"].presentValue=hourly_temperatures[6]
         bacnet_device["Predicted Temperature +21hr"].presentValue=hourly_temperatures[7]
         bacnet_device["Predicted Temperature +24hr"].presentValue=hourly_temperatures[8]
-
+    # update the predicted humidity readings
         bacnet_device["Predicted Humidity +3hr"].presentValue=hourly_humidity[1]
         bacnet_device["Predicted Humidity +6hr"].presentValue=hourly_humidity[2]
         bacnet_device["Predicted Humidity +9hr"].presentValue=hourly_humidity[3]
@@ -459,7 +474,7 @@ try:
         bacnet_device["Predicted Humidity +18hr"].presentValue=hourly_humidity[6]
         bacnet_device["Predicted Humidity +21hr"].presentValue=hourly_humidity[7]
         bacnet_device["Predicted Humidity +24hr"].presentValue=hourly_humidity[8]
-
+    # update the enthalty prediction readings
         bacnet_device["Predicted Enthalpy +3hr"].presentValue=enthalpy3hr
         bacnet_device["Predicted Enthalpy +6hr"].presentValue=enthalpy6hr
         bacnet_device["Predicted Enthalpy +9hr"].presentValue=enthalpy9hr
@@ -468,7 +483,7 @@ try:
         bacnet_device["Predicted Enthalpy +18hr"].presentValue=enthalpy18hr
         bacnet_device["Predicted Enthalpy +21hr"].presentValue=enthalpy21hr
         bacnet_device["Predicted Enthalpy +24hr"].presentValue=enthalpy24hr
-
+    # update the dew point readings
         bacnet_device["Predicted Dew Point +3hr"].presentValue=dew_point3hr
         bacnet_device["Predicted Dew Point +6hr"].presentValue=dew_point6hr
         bacnet_device["Predicted Dew Point +9hr"].presentValue=dew_point9hr
@@ -477,13 +492,13 @@ try:
         bacnet_device["Predicted Dew Point +18hr"].presentValue=dew_point18hr
         bacnet_device["Predicted Dew Point +21hr"].presentValue=dew_point21hr
         bacnet_device["Predicted Dew Point +24hr"].presentValue=dew_point24hr
-
+    # update the avg and max humidity and temp readings
         bacnet_device["Average Humidity 24H"].presentValue=average_humidity
         bacnet_device["Average Temperature 24H"].presentValue=average_temperature
         bacnet_device["Maximum Temperature 24H"].presentValue=max_temperature
         bacnet_device["Minimum Temperature 24H"].presentValue=min_temperature
         bacnet_device["Maximum Humidity 24H"].presentValue=max_humidity
-        bacnet_device["Minimum Humidity 24H"].presnetValue=min_humidity
+        bacnet_device["Minimum Humidity 24H"].presentValue=min_humidity
 
         print("devices updated")
         time.sleep(31*60)  # Wait for 31 mins before starting a new device instance
