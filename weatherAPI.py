@@ -23,7 +23,6 @@ lat = None
 lon = None
 WEATHER_API_KEY=None
 
-
 # Function to set latitude and longitude via user input
 def set_location():
     global lat, lon
@@ -48,7 +47,7 @@ def dewPointCalc(temp, humidity, height):
     global building_height
     a = 17.27
     b = 237.7
-    building_height = temp - (6.5 / 1000) * height
+    building_height = temp - (6.5 / 1000) * height # temperature typically decreases at a rate of 6.5 deg C for every 1000m (standard lapse rate)
     alpha = ((a * building_height) / (b + building_height)) + math.log(humidity / 100)
     dew_point = (b * alpha) / (a - alpha)
     return dew_point
@@ -56,7 +55,7 @@ def dewPointCalc(temp, humidity, height):
 # Function to calculate enthalpy
 def enthalpyCalc(temp, humidity, height):
     dew_point = dewPointCalc(temp, humidity, height)
-    building_height = temp - (6.5 / 1000) * height
+    building_height = temp - (6.5 / 1000) * height # refer to comment above and (standard lapse rate)
     h = 1.006 * building_height
     latent_heat = 2501
     specific_humidity = 0.622 * (humidity / 100) * 6.112 * math.exp((17.67 * dew_point) / (243.5 + dew_point)) / (1013.25 - (humidity / 100) * 6.112 * math.exp((17.67 * dew_point) / (243.5 + dew_point)))
@@ -134,6 +133,7 @@ def fetchWeatherPeriodically():
 set_location()
 setApiKey()
 setBuildingHeight()
+print(building_height)
 # Create a thread for periodic weather fetching
 weather_thread = threading.Thread(target=fetchWeatherPeriodically)
 weather_thread.start()
