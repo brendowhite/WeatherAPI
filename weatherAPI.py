@@ -26,21 +26,53 @@ WEATHER_API_KEY=None
 # Function to set latitude and longitude via user input
 def set_location():
     global lat, lon
-    try:
-        lat = float(input("Enter latitude: "))
-        lon = float(input("Enter longitude: "))
-    except ValueError:
-        print("Invalid input! Please enter valid numeric values for latitude and longitude.")
+    while True:
+        try:
+            lat = float(input("Enter latitude: "))
+            # Validate latitude values
+            if lat < -90 or lat > 90:
+                print("Invalid latitude! Latitude must be between -90 and 90 degrees.")
+                continue
+            # validate longitude values
+            lon = float(input("Enter longitude: "))
+            if lon < -180 or lon > 180:
+                print("Invalid longitude! Longitude must be between -180 and 180 degrees.")
+                continue
+            break
+        except ValueError:
+            print("Invalid input! Please enter valid numeric values for latitude and longitude.")
+
+# latitude = -33.785791
+# long = 151.121482
+
+# Call the function to set location
+set_location()
+
+# Print the entered latitude and longitude
+print(f"Latitude: {lat}, Longitude: {lon}")
+
 
 # Function to set OpenWeather API key via user input
 def setApiKey():
     global WEATHER_API_KEY
-    WEATHER_API_KEY = input("Enter your OpenWeather API key: ")
+    while True:
+        WEATHER_API_KEY = input("Enter your OpenWeather API key: ")
+        # Validate the API key by making a test request
+        url = f"http://api.openweathermap.org/data/2.5/weather?q=Sydney,au&appid={WEATHER_API_KEY}"
+        response = requests.get(url)
+        if response.status_code == 200:
+            print("API key is valid. Weather data can be retrieved.")
+            break
+        else:
+            print("Invalid API key! Please enter a valid OpenWeather API key.")
+
+setApiKey()
+
     #'0d5d2cfed28b5145804a9901a16c2b40'
 
 def setBuildingHeight():
     global building_height
-    building_height = float(input("Enter the height at which you want to calculate in meters: "))
+    building_height = float(input("Enter the height at which you want to calculate Enthalpy and Dew Point in meters: "))
 
 # Function to calculate dew point
 def dewPointCalc(temp, humidity, height):
@@ -121,7 +153,7 @@ def fetchWeatherData(lat, lon):
 
 
 # # Function to fetch weather data periodically
-def fetchWeatherPeriodically():
+def fetchWeatherPeriodically(lat, lon):
     while True:
         print("Fetching weather data...")
         fetchWeatherData(lat, lon)
@@ -130,17 +162,16 @@ def fetchWeatherPeriodically():
 
 # Use latitude and longitude from user input to fetch the updated weather on the thread
 # use api token for updated query
-set_location()
+# set_location()
 setApiKey()
 setBuildingHeight()
-print(building_height)
 # Create a thread for periodic weather fetching
-weather_thread = threading.Thread(target=fetchWeatherPeriodically)
+weather_thread = threading.Thread(target=fetchWeatherPeriodically, args=(lat, lon))
 weather_thread.start()
 
 # # Create the virtual BACnet device below, it will include a number of different analog_values for weather metrics
 def start_device():
-    new_device = BAC0.lite(deviceId=11110)
+    virtualDevice = BAC0.lite(deviceId=11110)
     time.sleep(1)
 
     # Analog Value creation for BACnet device. This will 
@@ -441,8 +472,8 @@ def start_device():
 
 # up to here
 
-    _new_objects.add_objects_to_application(new_device)
-    return new_device
+    _new_objects.add_objects_to_application(virtualDevice)
+    return virtualDevice
 
 try:
     bacnet_device = start_device()
