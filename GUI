@@ -1,6 +1,7 @@
 import tkinter as tk
 import time
 from tkinter import messagebox
+import requests
 #import weatherFetch # importing weather fetching backend module
 
 
@@ -19,6 +20,11 @@ def submit_form():
             messagebox.showerror("Error", "Please fill in all fields before submitting.")
             return
 
+        # Check if the API key is valid (you can replace this with your own validation logic)
+        if not validateAPIToken(WEATHER_API_KEY):
+            messagebox.showerror("Error", "Invalid API key. Please check your token.")
+            return
+
         if validate_lat(lat) and validate_lon(lon):
             print("Valid latitude and longitude values:")
             print(f"Latitude: {lat}")
@@ -33,22 +39,43 @@ def submit_form():
             lat = None
             lon = None
     except ValueError:
-        messagebox.showerror("Error", "Invalid input! Please enter valid numeric values for latitude, longitude, altitude, Device and Port IDs")
+        messagebox.showerror("Error", "Invalid input! Please enter valid numeric values for latitude, longitude, and altitude.")
         # Reset lat and lon to None
         lat = None
         lon = None
 
+# function to validate longitude input
 def validate_lon(lon):
     return -180 <= lon <= 180
-
+# function to validate latitude input
 def validate_lat(lat):
     return -90 <= lat <= 90
+
+# function to validate weather API token input
+def validateAPIToken(WEATHER_API_TOKEN):
+    try:
+        # dummy request to confirm validity
+        url = f"http://api.openweathermap.org/data/2.5/weather?q=London&appid={WEATHER_API_TOKEN}"
+        response = requests.get(url)
+
+        if response.status_code == 200:
+            print("API key is valid.")
+            return True
+        else:
+            print("API key is invalid.")
+            return False
+    except requests.RequestException:
+        print("Error occurred while checking the API key.")
+        return False    
 
 # creates clock with live time widget
 def update_time():
     current_time = time.strftime('Current Time: %H:%M:%S')
     clock_label.config(text=current_time)
     clock_label.after(1000,update_time)
+
+
+######################################### GUI START #########################################
 
 class Page(tk.Frame):
     def __init__(self, *args, **kwargs):
@@ -381,3 +408,6 @@ if __name__ == "__main__":
     root.resizable(False, False)
 
     root.mainloop()
+
+
+
