@@ -1,46 +1,12 @@
-# import tkinter as tk
-
-# def process_data():
-#     # Get data from Entry widgets
-#     api_key = api_key_entry.get()
-#     latitude = latitude_entry.get()
-#     longitude = longitude_entry.get()
-
-#     # Process the data (e.g., print it)
-#     print(f"API Key: {api_key}")
-#     print(f"Latitude: {latitude}")
-#     print(f"Longitude: {longitude}")
-
-# root = tk.Tk()
-# root.geometry("800x600") # sets the window size
-# root.title("Live Weather Gathering Module")
-# text_area = tk.Text(root)
-# text_area.place(x=0, y=0, relwidth=1, relheight=1)
-
-# # Create Entry widgets
-# api_key_label = tk.Label(root, text="API Key:")
-# api_key_entry = tk.Entry(root)
-# latitude_label = tk.Label(root, text="Latitude:")
-# latitude_entry = tk.Entry(root)
-# longitude_label = tk.Label(root, text="Longitude:")
-# longitude_entry = tk.Entry(root)
-
-# # Create a button to trigger data processing
-# process_button = tk.Button(root, text="Process Data", command=process_data)
-
-# # Arrange widgets using grid
-# api_key_label.grid(row=0, column=0, sticky="e")
-# api_key_entry.grid(row=0, column=1)
-# latitude_label.grid(row=1, column=0, sticky="e")
-# latitude_entry.grid(row=1, column=1)
-# longitude_label.grid(row=2, column=0, sticky="e")
-# longitude_entry.grid(row=2, column=1)
-# process_button.grid(row=3, columnspan=2)
-
-# # Start the event loop
-# root.mainloop()
-
 import tkinter as tk
+import time
+#import weatherFetch # importing weather fetching backend module
+
+# creates clock with live time widget
+def update_time():
+    current_time = time.strftime('Current Time: %H:%M:%S')
+    clock_label.config(text=current_time)
+    clock_label.after(1000,update_time)
 
 class Page(tk.Frame):
     def __init__(self, *args, **kwargs):
@@ -51,18 +17,18 @@ class Page(tk.Frame):
 class Page1(Page):
     def __init__(self, *args, **kwargs):
         Page.__init__(self, *args, **kwargs)
-        label = tk.Label(self, text="Device and API Configuration")
-        label.grid(row=0, column=0, columnspan=4, sticky="w")
+        label = tk.Label(self, text="DEVICE AND API CONFIGURATION", font=("segoe", 12, "bold"))
+        label.grid(row=0, column=0, columnspan=4, sticky="w", pady=(10,0))
 
         # Row 1 Widgets
         latitude_label = tk.Label(self, text="Latitude (-90 <-> +90):")
         latitude_entry = tk.Entry(self)
         device_label = tk.Label(self, text="BACnet Device ID:")
         device_entry = tk.Entry(self)
-        latitude_label.grid(row=1, column=0, sticky="w")
-        latitude_entry.grid(row=1, column=1, sticky="w")
-        device_label.grid(row=1, column=3, sticky="w")
-        device_entry.grid(row=1, column=4, sticky="w")
+        latitude_label.grid(row=1, column=0, sticky="w", pady=(10,0))
+        latitude_entry.grid(row=1, column=1, sticky="w", pady=(10,0))
+        device_label.grid(row=1, column=3, sticky="w", pady=(10,0))
+        device_entry.grid(row=1, column=4, sticky="w", pady=(10,0))
 
         # Row 2 widgets
         longitude_label = tk.Label(self, text="Longitude (-180 <-> +180):")
@@ -75,24 +41,24 @@ class Page1(Page):
         port_entry.grid(row=2, column=4, sticky="w")
         
         # Row 3 widgets
-        altitude_label = tk.Label(self, text="Altitude (M)")
+        altitude_label = tk.Label(self, text="Altitude (Meters)")
         altitude_entry = tk.Entry(self)
         altitude_label.grid(row=3, column=0, sticky="w")
         altitude_entry.grid(row=3, column=1, sticky="w")
 
         # Row 4 label
-        api_heading_label = tk.Label(self, text= "API Sources")
-        api_heading_label.grid(row=4, column=0, sticky="w")
+        api_heading_label = tk.Label(self, text= "WEATHER API SOURCES", font=("segoe", 12, "bold"))
+        api_heading_label.grid(row=4, column=0, sticky="w", pady=(10,0))
 
         # Open weather widgets (R5)
-        openweather_api_label = tk.Label(self, text="Open Weather API:")
+        openweather_api_label = tk.Label(self, text="Open Weather API:", )
         openweather_api_checkbox = tk.Checkbutton(self)
         api_key_label = tk.Label(self, text="API Key:")
         api_key_entry = tk.Entry(self)
-        openweather_api_label.grid(row=5, column=0, sticky="w")
-        openweather_api_checkbox.grid(row=5, column=1, sticky="w")
-        api_key_label.grid(row=5, column=2, sticky="w")
-        api_key_entry.grid(row=5, column=3, sticky="w")
+        openweather_api_label.grid(row=5, column=0, sticky="w", pady=(10,0))
+        openweather_api_checkbox.grid(row=5, column=1, sticky="w", pady=(10,0))
+        api_key_label.grid(row=5, column=2, sticky="w", pady=(10,0))
+        api_key_entry.grid(row=5, column=3, sticky="w", pady=(10,0))
 
         # Row 6 widgets
         api2_label = tk.Label(self, text="API Src 2:")
@@ -114,23 +80,193 @@ class Page1(Page):
         api3_key_label.grid(row=7, column=2)
         api3_entry.grid(row=7, column=3)
 
+        # Row 8 widgets (Start and Stop buttons)
+        start_button = tk.Button(self, text="START", width=10, height=4, bg="green")
+        stop_button = tk.Button(self, text="STOP", width=10, height=4, bg="red")
+        start_button.grid(row=8, column=1, pady=(40,0))
+        stop_button.grid(row=8, column=3, pady=(40,0))
+
 class Page2(Page):
-   def __init__(self, *args, **kwargs):
-       Page.__init__(self, *args, **kwargs)
-       label = tk.Label(self, text="This is page 2")
-       label.pack(side="top", fill="both", expand=True)
+    def __init__(self, *args, **kwargs):
+        Page.__init__(self, *args, **kwargs)
+        templabel = tk.Label(self, text="Temperature", font=("segoe", 10, "bold"))
+        templabel.grid(row=0, column=0, columnspan=4, pady=(10, 0), sticky="w")
+
+        # Create labels for the rows
+        row_labels = ["Current:", "Max:", "Average:"] + [f"+{i*3} hours:" for i in range(1, 9)]
+
+        for i, row_label in enumerate(row_labels):
+            row_label_widget = tk.Label(self, text=row_label)
+            row_label_widget.grid(row=i + 1, column=0, sticky="w", pady=(10, 0))
+
+            # Create an Entry widget for each temperature value
+            entry = tk.Entry(self, width=10)
+            entry.grid(row=i + 1, column=1, padx=10, pady=(10, 0), sticky="w")
+
+        # Create labels for humidity
+        humidity_label = tk.Label(self, text="Humidity", font=("segoe", 10, "bold"))
+        humidity_label.grid(row=0, column=2, pady=(10, 0), padx=10)
+
+        # Create labels for the rows (humidity)
+        humrow_labels = ["Current:", "Max:", "Average"] + [f"+{i*3} hours:" for i in range(1, 9)]
+
+        for i, row_label in enumerate(humrow_labels):
+            row_label_widget = tk.Label(self, text=row_label)
+            row_label_widget.grid(row=i + 1, column=2, sticky="w", pady=(10, 0), padx=10)
+
+            # Create an Entry widget for each humidity value
+            entry = tk.Entry(self, width=10)
+            entry.grid(row=i + 1, column=3, padx=10, pady=(10, 0))
+
+        # create labels for rows (dew point)
+        dewpt_label = tk.Label(self, text="Dew Point", font=("segoe", 10, "bold"))
+        dewpt_label.grid(row=0, column=4, pady=(10, 0), padx=10)
+
+        dewpt_labels = ["Current:", "Max:", "Average"] + [f"+{i*3} hours:" for i in range(1, 9)]
+
+        for i, row_label in enumerate(dewpt_labels):
+            row_label_widget = tk.Label(self, text=row_label)
+            row_label_widget.grid(row=i + 1, column=4, sticky="w", pady=(10, 0), padx=10)
+
+            # Create an Entry widget for each humidity value
+            entry = tk.Entry(self, width=10)
+            entry.grid(row=i + 1, column=5, padx=10, pady=(10, 0))
+
+        # create labels for rows (dew point)
+        enth_label = tk.Label(self, text="Dew Point", font=("segoe", 10, "bold"))
+        enth_label.grid(row=0, column=6, pady=(10, 0), padx=10)
+
+        enth_labels = ["Current:", "Max:", "Average"] + [f"+{i*3} hours:" for i in range(1, 9)]
+
+        for i, row_label in enumerate(enth_labels):
+            row_label_widget = tk.Label(self, text=row_label)
+            row_label_widget.grid(row=i + 1, column=6, sticky="w", pady=(10, 0), padx=10)
+
+            # Create an Entry widget for each humidity value
+            entry = tk.Entry(self, width=10)
+            entry.grid(row=i + 1, column=7, padx=10, pady=(10, 0))
+
 
 class Page3(Page):
-   def __init__(self, *args, **kwargs):
-       Page.__init__(self, *args, **kwargs)
-       label = tk.Label(self, text="This is page 3")
-       label.pack(side="top", fill="both", expand=True)
+    def __init__(self, *args, **kwargs):
+        Page.__init__(self, *args, **kwargs)
+        templabel = tk.Label(self, text="Temperature", font=("segoe", 10, "bold"))
+        templabel.grid(row=0, column=0, columnspan=4, pady=(10, 0), sticky="w")
+
+        # Create labels for the rows
+        row_labels = ["Current:", "Max:", "Average:"] + [f"+{i*3} hours:" for i in range(1, 9)]
+
+        for i, row_label in enumerate(row_labels):
+            row_label_widget = tk.Label(self, text=row_label)
+            row_label_widget.grid(row=i + 1, column=0, sticky="w", pady=(10, 0))
+
+            # Create an Entry widget for each temperature value
+            entry = tk.Entry(self, width=10)
+            entry.grid(row=i + 1, column=1, padx=10, pady=(10, 0), sticky="w")
+
+        # Create labels for humidity
+        humidity_label = tk.Label(self, text="Humidity", font=("segoe", 10, "bold"))
+        humidity_label.grid(row=0, column=2, pady=(10, 0), padx=10)
+
+        # Create labels for the rows (humidity)
+        humrow_labels = ["Current:", "Max:", "Average"] + [f"+{i*3} hours:" for i in range(1, 9)]
+
+        for i, row_label in enumerate(humrow_labels):
+            row_label_widget = tk.Label(self, text=row_label)
+            row_label_widget.grid(row=i + 1, column=2, sticky="w", pady=(10, 0), padx=10)
+
+            # Create an Entry widget for each humidity value
+            entry = tk.Entry(self, width=10)
+            entry.grid(row=i + 1, column=3, padx=10, pady=(10, 0))
+
+        # create labels for rows (dew point)
+        dewpt_label = tk.Label(self, text="Dew Point", font=("segoe", 10, "bold"))
+        dewpt_label.grid(row=0, column=4, pady=(10, 0), padx=10)
+
+        dewpt_labels = ["Current:", "Max:", "Average"] + [f"+{i*3} hours:" for i in range(1, 9)]
+
+        for i, row_label in enumerate(dewpt_labels):
+            row_label_widget = tk.Label(self, text=row_label)
+            row_label_widget.grid(row=i + 1, column=4, sticky="w", pady=(10, 0), padx=10)
+
+            # Create an Entry widget for each humidity value
+            entry = tk.Entry(self, width=10)
+            entry.grid(row=i + 1, column=5, padx=10, pady=(10, 0))
+
+        # create labels for rows (dew point)
+        enth_label = tk.Label(self, text="Dew Point", font=("segoe", 10, "bold"))
+        enth_label.grid(row=0, column=6, pady=(10, 0), padx=10)
+
+        enth_labels = ["Current:", "Max:", "Average"] + [f"+{i*3} hours:" for i in range(1, 9)]
+
+        for i, row_label in enumerate(enth_labels):
+            row_label_widget = tk.Label(self, text=row_label)
+            row_label_widget.grid(row=i + 1, column=6, sticky="w", pady=(10, 0), padx=10)
+
+            # Create an Entry widget for each humidity value
+            entry = tk.Entry(self, width=10)
+            entry.grid(row=i + 1, column=7, padx=10, pady=(10, 0))
+
 
 class Page4(Page):
-   def __init__(self, *args, **kwargs):
-       Page.__init__(self, *args, **kwargs)
-       label = tk.Label(self, text="This is page 4")
-       label.pack(side="top", fill="both", expand=True)
+    def __init__(self, *args, **kwargs):
+        Page.__init__(self, *args, **kwargs)
+        templabel = tk.Label(self, text="Temperature", font=("segoe", 10, "bold"))
+        templabel.grid(row=0, column=0, columnspan=4, pady=(10, 0), sticky="w")
+
+        # Create labels for the rows
+        row_labels = ["Current:", "Max:", "Average:"] + [f"+{i*3} hours:" for i in range(1, 9)]
+
+        for i, row_label in enumerate(row_labels):
+            row_label_widget = tk.Label(self, text=row_label)
+            row_label_widget.grid(row=i + 1, column=0, sticky="w", pady=(10, 0))
+
+            # Create an Entry widget for each temperature value
+            entry = tk.Entry(self, width=10)
+            entry.grid(row=i + 1, column=1, padx=10, pady=(10, 0), sticky="w")
+
+        # Create labels for humidity
+        humidity_label = tk.Label(self, text="Humidity", font=("segoe", 10, "bold"))
+        humidity_label.grid(row=0, column=2, pady=(10, 0), padx=10)
+
+        # Create labels for the rows (humidity)
+        humrow_labels = ["Current:", "Max:", "Average:"] + [f"+{i*3} hours:" for i in range(1, 9)]
+
+        for i, row_label in enumerate(humrow_labels):
+            row_label_widget = tk.Label(self, text=row_label)
+            row_label_widget.grid(row=i + 1, column=2, sticky="w", pady=(10, 0), padx=10)
+
+            # Create an Entry widget for each humidity value
+            entry = tk.Entry(self, width=10)
+            entry.grid(row=i + 1, column=3, padx=10, pady=(10, 0))
+
+        # create labels for rows (dew point)
+        dewpt_label = tk.Label(self, text="Dew Point", font=("segoe", 10, "bold"))
+        dewpt_label.grid(row=0, column=4, pady=(10, 0), padx=10)
+
+        dewpt_labels = ["Current:", "Max:", "Average:"] + [f"+{i*3} hours:" for i in range(1, 9)]
+
+        for i, row_label in enumerate(dewpt_labels):
+            row_label_widget = tk.Label(self, text=row_label)
+            row_label_widget.grid(row=i + 1, column=4, sticky="w", pady=(10, 0), padx=10)
+
+            # Create an Entry widget for each humidity value
+            entry = tk.Entry(self, width=10)
+            entry.grid(row=i + 1, column=5, padx=10, pady=(10, 0))
+
+        # create labels for rows (dew point)
+        enth_label = tk.Label(self, text="Dew Point", font=("segoe", 10, "bold"))
+        enth_label.grid(row=0, column=6, pady=(10, 0), padx=10)
+
+        enth_labels = ["Current:", "Max:", "Average"] + [f"+{i*3} hours:" for i in range(1, 9)]
+
+        for i, row_label in enumerate(enth_labels):
+            row_label_widget = tk.Label(self, text=row_label)
+            row_label_widget.grid(row=i + 1, column=6, sticky="w", pady=(10, 0), padx=10)
+
+            # Create an Entry widget for each humidity value
+            entry = tk.Entry(self, width=10)
+            entry.grid(row=i + 1, column=7, padx=10, pady=(10, 0))
 
 class MainView(tk.Frame):
     def __init__(self, *args, **kwargs):
@@ -139,6 +275,7 @@ class MainView(tk.Frame):
         p2 = Page2(self)
         p3 = Page3(self)
         p4 = Page4(self)
+
 
         buttonframe = tk.Frame(self)
         container = tk.Frame(self)
@@ -150,10 +287,24 @@ class MainView(tk.Frame):
         p3.place(in_=container, x=0, y=0, relwidth=1, relheight=1)
         p4.place(in_=container, x=0, y=0, relwidth=1, relheight=1)
 
-        b1 = tk.Button(buttonframe, text="Configuration", command=p1.show)
-        b2 = tk.Button(buttonframe, text="Source 1: Open Weather", command=p2.show)
-        b3 = tk.Button(buttonframe, text="Source 2: Placeholder", command=p3.show)
-        b4 = tk.Button(buttonframe, text="Source 3: Placeholder", command=p4.show)
+        def show_page(page, button):
+            # Show the selected page
+            page.show()
+
+            # Highlight the active button (change color)
+            for btn in [b1, b2, b3, b4]:
+                btn.configure(bg='lightblue')  # Reset other buttons
+            button.configure(bg='orange')  # Set active button color
+
+            # Change Page 1 color to blue when another page is opened
+            if page != p1:
+                b1.configure(bg='lightblue')  # Set Page 1 color to blue
+
+
+        b1 = tk.Button(buttonframe, text="Configuration", command=lambda: show_page(p1, b1), bg='orange')
+        b2 = tk.Button(buttonframe, text="Source 1: Open Weather", command=lambda: show_page(p2, b2), bg='lightblue')
+        b3 = tk.Button(buttonframe, text="Source 2: Placeholder", command=lambda: show_page(p3, b3), bg='lightblue')
+        b4 = tk.Button(buttonframe, text="Source 3: Placeholder", command=lambda: show_page(p4, b4), bg='lightblue')
 
 
         b1.pack(side="left")
@@ -163,12 +314,23 @@ class MainView(tk.Frame):
 
         p1.show()
 
+        # Create the clock label
+        global clock_label
+        clock_label = tk.Label(self, font=("segoe", 10))
+        clock_label.pack()
+
+        # Start updating the time
+        update_time()
+
+
 if __name__ == "__main__":
     root = tk.Tk()
     main = MainView(root)
     main.pack(side="top", fill="both", expand=True)
-    root.geometry("550x400")
+    root.geometry("700x450")
     root.title("Weather API Fetching Virtual BACnet Device")
+    root.resizable(False, False)
+
     root.mainloop()
 
 
