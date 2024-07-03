@@ -6,7 +6,6 @@ from BAC0.core.devices.local.models import (
 import BAC0
 import time
 import datetime
-import threading
 
 current_time = datetime.datetime.now()
 
@@ -22,29 +21,34 @@ average_temperature = 0
 lat = None
 lon = None
 api_token = None
-building_height = 2
+# altitude = None
 device_Id = None
 port_Id = None
+
 
 # '0d5d2cfed28b5145804a9901a16c2b40'
 # latitude = -33.785791
 # long = 151.121482
 
+def setAltitude(inputAlt):
+    global altitude
+    altitude = float(inputAlt)
+    return altitude
+
 # Function to calculate dew point
-def dewPointCalc(temp, humidity, height):
-    global building_height
+def dewPointCalc(temp, humidity, altitude):
     a = 17.27
     b = 237.7
-    building_height = temp - (6.5 / 1000) * height # temperature typically decreases at a rate of 6.5 deg C for every 1000m (standard lapse rate)
-    alpha = ((a * building_height) / (b + building_height)) + math.log(humidity / 100)
+    deltaTemp = temp - (6.5 / 1000) * altitude # temperature typically decreases at a rate of 6.5 deg C for every 1000m (standard lapse rate)
+    alpha = ((a * deltaTemp) / (b + deltaTemp)) + math.log(humidity / 100)
     dew_point = (b * alpha) / (a - alpha)
     return dew_point
 
 # Function to calculate enthalpy
-def enthalpyCalc(temp, humidity, height):
-    dew_point = dewPointCalc(temp, humidity, height)
-    building_height = temp - (6.5 / 1000) * height # refer to comment above and (standard lapse rate)
-    h = 1.006 * building_height
+def enthalpyCalc(temp, humidity, altitude):
+    dew_point = dewPointCalc(temp, humidity, altitude)
+    deltaTemp = temp - (6.5 / 1000) * altitude # refer to comment above and (standard lapse rate)
+    h = 1.006 * deltaTemp
     latent_heat = 2501
     specific_humidity = 0.622 * (humidity / 100) * 6.112 * math.exp((17.67 * dew_point) / (243.5 + dew_point)) / (1013.25 - (humidity / 100) * 6.112 * math.exp((17.67 * dew_point) / (243.5 + dew_point)))
     enthalpy = h + (latent_heat * specific_humidity)
@@ -55,11 +59,7 @@ def fetchWeatherData(lat, lon, api_token):
     global current_temperature, humidity, current_dew_point, current_enthalpy, hourly_temperatures, hourly_humidity, max_temperature, average_temperature, average_humidity, max_humidity
     global dew_point3hr, dew_point6hr, dew_point9hr, dew_point12hr, dew_point15hr, dew_point18hr, dew_point21hr, dew_point24hr, min_temperature, min_humidity
     global enthalpy3hr, enthalpy6hr, enthalpy9hr, enthalpy12hr, enthalpy15hr, enthalpy18hr, enthalpy21hr, enthalpy24hr
-    # if lat is None or lon is None:
-    #     print("Latitude and/or longitude not set. Please set location first.")
-    #     return
-    
-
+ 
     # Open Weather Map API with 3 arguments, latitude, longitude and weather api token. Metric by default
     url = f'http://api.openweathermap.org/data/2.5/forecast?lat={lat}&lon={lon}&units=metric&appid={api_token}'
     response = requests.get(url)
@@ -80,24 +80,24 @@ def fetchWeatherData(lat, lon, api_token):
         min_humidity = min(hourly_humidity)
 
         # Data for dew point and enthalpy calculated via custom functions
-        current_dew_point = dewPointCalc(current_temperature, humidity, building_height)
-        dew_point3hr = dewPointCalc(hourly_temperatures[1], hourly_humidity[1], building_height)
-        dew_point6hr = dewPointCalc(hourly_temperatures[2], hourly_humidity[2], building_height)
-        dew_point9hr = dewPointCalc(hourly_temperatures[3], hourly_humidity[3], building_height)
-        dew_point12hr = dewPointCalc(hourly_temperatures[4], hourly_humidity[4], building_height)
-        dew_point15hr = dewPointCalc(hourly_temperatures[5], hourly_humidity[5], building_height)
-        dew_point18hr = dewPointCalc(hourly_temperatures[6], hourly_humidity[6], building_height)
-        dew_point21hr = dewPointCalc(hourly_temperatures[7], hourly_humidity[7], building_height)
-        dew_point24hr = dewPointCalc(hourly_temperatures[8], hourly_humidity[8], building_height)
-        current_enthalpy = enthalpyCalc(current_temperature, humidity, building_height)
-        enthalpy3hr = enthalpyCalc(hourly_temperatures[1], hourly_humidity[1], building_height)
-        enthalpy6hr = enthalpyCalc(hourly_temperatures[2], hourly_humidity[2], building_height)
-        enthalpy9hr = enthalpyCalc(hourly_temperatures[3], hourly_humidity[3], building_height)
-        enthalpy12hr = enthalpyCalc(hourly_temperatures[4], hourly_humidity[4], building_height)
-        enthalpy15hr = enthalpyCalc(hourly_temperatures[5], hourly_humidity[5], building_height)
-        enthalpy18hr = enthalpyCalc(hourly_temperatures[6], hourly_humidity[6], building_height)
-        enthalpy21hr = enthalpyCalc(hourly_temperatures[7], hourly_humidity[7], building_height)
-        enthalpy24hr = enthalpyCalc(hourly_temperatures[8], hourly_humidity[8], building_height)
+        current_dew_point = dewPointCalc(current_temperature, humidity, altitude)
+        dew_point3hr = dewPointCalc(hourly_temperatures[1], hourly_humidity[1], altitude)
+        dew_point6hr = dewPointCalc(hourly_temperatures[2], hourly_humidity[2], altitude)
+        dew_point9hr = dewPointCalc(hourly_temperatures[3], hourly_humidity[3], altitude)
+        dew_point12hr = dewPointCalc(hourly_temperatures[4], hourly_humidity[4], altitude)
+        dew_point15hr = dewPointCalc(hourly_temperatures[5], hourly_humidity[5], altitude)
+        dew_point18hr = dewPointCalc(hourly_temperatures[6], hourly_humidity[6], altitude)
+        dew_point21hr = dewPointCalc(hourly_temperatures[7], hourly_humidity[7], altitude)
+        dew_point24hr = dewPointCalc(hourly_temperatures[8], hourly_humidity[8], altitude)
+        current_enthalpy = enthalpyCalc(current_temperature, humidity, altitude)
+        enthalpy3hr = enthalpyCalc(hourly_temperatures[1], hourly_humidity[1], altitude)
+        enthalpy6hr = enthalpyCalc(hourly_temperatures[2], hourly_humidity[2], altitude)
+        enthalpy9hr = enthalpyCalc(hourly_temperatures[3], hourly_humidity[3], altitude)
+        enthalpy12hr = enthalpyCalc(hourly_temperatures[4], hourly_humidity[4], altitude)
+        enthalpy15hr = enthalpyCalc(hourly_temperatures[5], hourly_humidity[5], altitude)
+        enthalpy18hr = enthalpyCalc(hourly_temperatures[6], hourly_humidity[6], altitude)
+        enthalpy21hr = enthalpyCalc(hourly_temperatures[7], hourly_humidity[7], altitude)
+        enthalpy24hr = enthalpyCalc(hourly_temperatures[8], hourly_humidity[8], altitude)
 
         print(f"Current Temperature: {current_temperature} °C")
         print(f"Current Humidity: {humidity} %")
