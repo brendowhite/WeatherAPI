@@ -114,7 +114,7 @@ def fetchWeatherPeriodically(lat, lon, api_token):
         print("Fetching weather data...")
         fetchWeatherData(lat, lon,api_token)
         print("Weather data fetched.")
-        time.sleep(45)  # sleep for 30 minutes
+        time.sleep(30*60)  # sleep for 30 minutes
     # Create a thread for periodic weather fetching
 
 
@@ -484,7 +484,7 @@ def updateBACnetValues(device_Id, port_Id):
             bacnet_device["Minimum Humidity 24H"].presentValue=min_humidity
 
             print("devices updated")
-            time.sleep(50)  # Wait for 31 mins before starting a new device instance
+            time.sleep(31*60)  # Wait for 31 mins before starting a new device instance
     except Exception as e:
         print(f"Error: {e}")
 
