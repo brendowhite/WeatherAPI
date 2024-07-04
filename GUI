@@ -146,7 +146,7 @@ class Page1(Page):
         port_entry.grid(row=2, column=4, sticky="w")
         
         # Row 3 widgets
-        altitude_label = tk.Label(self, text="Altitude (Meters):")
+        altitude_label = tk.Label(self, text="Altitude (Metres:")
         altitude_entry = tk.Entry(self)
         altitude_label.grid(row=3, column=0, sticky="w")
         altitude_entry.grid(row=3, column=1, sticky="w")
