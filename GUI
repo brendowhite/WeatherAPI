@@ -18,6 +18,13 @@ def submit_form():
         device_Id = int(device_entry.get())
         port_Id = port_entry.get()
 
+        if not validate_lat(lat):
+            messagebox.showerror("Error", "Invalid latitude, please enter a value between -90 and 90 degrees.")
+            return
+        
+        if not validate_lon(lon):
+            messagebox.showerror("Error", "Invalid longitude, please enter a value between -180 and 180 degrees.")
+            return
         # Check if all fields are filled
         if not (lat and lon and inputAlt and api_token and device_Id and port_Id):
             messagebox.showerror("Error", "Please fill in all fields before submitting.")
@@ -29,7 +36,7 @@ def submit_form():
             return
         
         if not validDeviceId(device_Id):
-            messagebox.showerror("Error:", "Please enter a device ID between 0 and 4194302")
+            messagebox.showerror("Error", "Please enter a device ID between 0 and 4194302")
             return
 
         setAltitude(inputAlt)
