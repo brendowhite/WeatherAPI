@@ -2,50 +2,63 @@ import tkinter as tk
 import time
 from tkinter import messagebox
 import requests
-#import weatherFetch # importing weather fetching backend module
+from weatherFetch import fetchWeatherData, fetchWeatherPeriodically, updateBACnetValues, setAltitude
+import threading
 
+
+########################### GUI FUNCTIONALITY ################################
 
 # function to collect user inputs from the form
 def submit_form():
     try:
         lat = float(latitude_entry.get())
         lon = float(longitude_entry.get())
-        height = float(altitude_entry.get())
-        port = int(port_entry.get())
-        deviceId = int(device_entry.get())
-        WEATHER_API_KEY = api_key_entry.get()
+        inputAlt = float(altitude_entry.get())
+        api_token = api_key_entry.get()
+        device_Id = device_entry.get()
+        port_Id = port_entry.get()
 
         # Check if all fields are filled
-        if not (lat and lon and height and port and deviceId and WEATHER_API_KEY):
+        if not (lat and lon and inputAlt and api_token):
             messagebox.showerror("Error", "Please fill in all fields before submitting.")
             return
 
         # Check if the API key is valid (you can replace this with your own validation logic)
-        if not validateAPIToken(WEATHER_API_KEY):
+        if not validateAPIToken(api_token):
             messagebox.showerror("Error", "Invalid API key. Please check your token.")
             return
 
-        if validate_lat(lat) and validate_lon(lon):
-            print("Valid latitude and longitude values:")
-            print(f"Latitude: {lat}")
-            print(f"Longitude: {lon}")
-            print(f"Altitude: {height}")
-            print(f"Port: {port}")
-            print(f"Device ID: {deviceId}")
-            print(f"Weather API Key: {WEATHER_API_KEY}")
-        else:
-            messagebox.showerror("Error", "Invalid latitude or longitude values. Please check the input.")
-            # Reset lat and lon to None
-            lat = None
-            lon = None
+        setAltitude(inputAlt)
+        # Pass the values to backend functions
+        fetchWeatherData(lat, lon, api_token)
+
+        # Create a thread for periodic weather fetching
+        weather_thread = threading.Thread(target=fetchWeatherPeriodically, args=(lat, lon, api_token))
+        weather_thread.start()
+
+        # Start BACnet devices and update their values
+        BACnetThread = threading.Thread(target=updateBACnetValues, args= (device_Id, port_Id))
+        BACnetThread.start()
+
+
+        # Print the values
+        print("Valid latitude and longitude values:")
+        print(f"Latitude: {lat}")
+        print(f"Longitude: {lon}")
+        print(f"Altitude: {inputAlt}")
+        print(f"Weather API Key: {api_token}")
+        # print(f"BACnet Device ID: {virtual_device}")
+
     except ValueError:
         messagebox.showerror("Error", "Invalid input! Please enter valid numeric values for latitude, longitude, and altitude.")
         # Reset lat and lon to None
         lat = None
         lon = None
 
+
 # function to validate longitude input
 def validate_lon(lon):
+
     return -180 <= lon <= 180
 # function to validate latitude input
 def validate_lat(lat):
@@ -157,8 +170,8 @@ class Page1(Page):
         api3_entry.grid(row=7, column=3)
 
         # Row 8 widgets (Start and Stop buttons)
-        start_button = tk.Button(self, text="START", width=10, height=4, bg="green", command=submit_form)
-        stop_button = tk.Button(self, text="STOP", width=10, height=4, bg="red")
+        start_button = tk.Button(self, text="START", width=5, height=2, bg="green", command=(submit_form))
+        stop_button = tk.Button(self, text="STOP", width=5, height=2, bg="red")
         start_button.grid(row=8, column=1, pady=(40,0))
         stop_button.grid(row=8, column=3, pady=(40,0))
 
@@ -396,18 +409,15 @@ class MainView(tk.Frame):
         clock_label.pack()
 
         # Start updating the time
-        update_time()
+        update_time()  
 
 
-if __name__ == "__main__":
-    root = tk.Tk()
-    main = MainView(root)
-    main.pack(side="top", fill="both", expand=True)
-    root.geometry("700x450")
-    root.title("Weather API Fetching Virtual BACnet Device")
-    root.resizable(False, False)
+# if __name__ == "__main__":
+#     root = tk.Tk()
+#     main_view = MainView(root)  # Create an instance of your MainView
+#     main_view.pack(side="top", fill="both", expand=True)
+#     root.geometry("700x450")
+#     root.title("Weather API Fetching Virtual BACnet Device")
+#     root.resizable(False, False)
 
-    root.mainloop()
-
-
-
+#     root.mainloop()
