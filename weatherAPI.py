@@ -18,6 +18,25 @@ hourly_temperatures = []
 hourly_humidity = []
 max_temperature = 0
 average_temperature = 0
+max_humidity = 0
+average_humidity = 0
+dew_point3hr = 0
+dew_point6hr = 0
+dew_point9hr = 0
+dew_point12hr = 0
+dew_point15hr = 0
+dew_point18hr = 0
+dew_point21hr = 0
+dew_point24hr = 0
+enthalpy3hr = 0
+enthalpy6hr = 0
+enthalpy9hr = 0
+enthalpy12hr = 0
+enthalpy15hr = 0
+enthalpy18hr = 0
+enthalpy21hr = 0
+enthalpy24hr = 0
+
 lat = None
 lon = None
 api_token = None
@@ -57,7 +76,7 @@ def enthalpyCalc(temp, humidity, altitude):
 def fetchWeatherData(lat, lon, api_token):
     # define global variables to be used in updating analog_values on BACnet device
     global current_temperature, humidity, current_dew_point, current_enthalpy, hourly_temperatures, hourly_humidity, max_temperature, average_temperature, average_humidity, max_humidity
-    global dew_point3hr, dew_point6hr, dew_point9hr, dew_point12hr, dew_point15hr, dew_point18hr, dew_point21hr, dew_point24hr, min_temperature, min_humidity
+    global dew_point3hr, dew_point6hr, dew_point9hr, dew_point12hr, dew_point15hr, dew_point18hr, dew_point21hr, dew_point24hr
     global enthalpy3hr, enthalpy6hr, enthalpy9hr, enthalpy12hr, enthalpy15hr, enthalpy18hr, enthalpy21hr, enthalpy24hr
  
     # Open Weather Map API with 3 arguments, latitude, longitude and weather api token. Metric by default
@@ -71,13 +90,11 @@ def fetchWeatherData(lat, lon, api_token):
         hourly_temperatures = [hour['main']['temp'] for hour in hourly_data]
         hourly_humidity = [hour['main']['humidity'] for hour in hourly_data]
         max_temperature = max(hourly_temperatures)
-        min_temperature = min(hourly_temperatures)
         average_temperature = sum(hourly_temperatures) / len(hourly_temperatures)
         current_temperature = data['list'][0]['main']['temp']
         humidity = data['list'][0]['main']['humidity']
         average_humidity = sum(hourly_humidity) / len(hourly_humidity)
         max_humidity = max(hourly_humidity)
-        min_humidity = min(hourly_humidity)
 
         # Data for dew point and enthalpy calculated via custom functions
         current_dew_point = dewPointCalc(current_temperature, humidity, altitude)
@@ -107,6 +124,39 @@ def fetchWeatherData(lat, lon, api_token):
     except KeyError:
         print("Error fetching initial weather data")
 
+def extractWeatherData():
+    return{"hourly_temperatures":hourly_temperatures,
+           "current_temperature":current_temperature,
+           "hourly_humidity":hourly_humidity,
+           "max_temperature":max_temperature,
+           "max_humidity":max_humidity,
+           "average_humidity":average_humidity,
+           "average_temperature":average_temperature,
+           "humidity":humidity,
+           "current_dew_point":current_dew_point,
+           "dew_point3hr":dew_point3hr,
+           "dew_point6hr":dew_point6hr,
+           "dew_point9hr":dew_point9hr,
+           "dew_point12hr":dew_point12hr,
+           "dew_point15hr":dew_point15hr,
+           "dew_point18hr":dew_point18hr,
+           "dew_point21hr":dew_point21hr,
+           "dew_point24hr":dew_point24hr,
+           "current_enthalpy":current_enthalpy,
+           "enthalpy3hr":enthalpy3hr,
+           "enthalpy6hr":enthalpy6hr,
+           "enthalpy9hr":enthalpy9hr,
+           "enthalpy12hr":enthalpy12hr,
+           "enthalpy15hr":enthalpy15hr,
+           "enthalpy18hr":enthalpy18hr,
+           "enthalpy21hr":enthalpy21hr,
+           "enthalpy24hr":enthalpy24hr}
+
+def updateExtractWeather():
+    while True:
+        extractWeatherData()
+        time.sleep(5)
+
 
 # # Function to fetch weather data periodically
 def fetchWeatherPeriodically(lat, lon, api_token):
@@ -114,8 +164,8 @@ def fetchWeatherPeriodically(lat, lon, api_token):
         print("Fetching weather data...")
         fetchWeatherData(lat, lon,api_token)
         print("Weather data fetched.")
-        time.sleep(30*60)  # sleep for 30 minutes
-    # Create a thread for periodic weather fetching
+        time.sleep(30)  # sleep for 30 minutes
+
 
 
 # # Create the virtual BACnet device below, it will include a number of different analog_values for weather metrics
@@ -399,25 +449,12 @@ def start_device(device_Id, port_Id):
     )
     _new_objects = analog_value(
         instance=40,
-        name="Minimum Humidity 24H",
-        description="Min Humidity in the next 24HR",
-        presentValue=min_humidity,
-        properties={"units":"percent"}
-    )
-    _new_objects = analog_value(
-        instance=41,
         name="Maximum Temperature 24H",
         description="Max Temperature in the next 24HR",
         presentValue=max_temperature,
         properties={"units":"degreesCelsius"}
     )
-    _new_objects = analog_value(
-        instance=42,
-        name="Minimum Temperature 24H",
-        description="Min Temperature in the next 24HR",
-        presentValue=min_temperature,
-        properties={"units":"degreesCelsius"}
-    )
+
 
 # up to here
 
@@ -434,7 +471,7 @@ def updateBACnetValues(device_Id, port_Id):
 
         # Code below will update the weather data stored inside the BACnet device every 31 minutes
     # update the current weather values for temp, humidity, dew pt and enthalpy
-            print("we are here")
+
             bacnet_device["Current Temperature"].presentValue = current_temperature
             bacnet_device["Current Humidity"].presentValue = humidity
             bacnet_device["Dew Point"].presentValue = current_dew_point
@@ -479,12 +516,10 @@ def updateBACnetValues(device_Id, port_Id):
             bacnet_device["Average Humidity 24H"].presentValue=average_humidity
             bacnet_device["Average Temperature 24H"].presentValue=average_temperature
             bacnet_device["Maximum Temperature 24H"].presentValue=max_temperature
-            bacnet_device["Minimum Temperature 24H"].presentValue=min_temperature
             bacnet_device["Maximum Humidity 24H"].presentValue=max_humidity
-            bacnet_device["Minimum Humidity 24H"].presentValue=min_humidity
 
-            print("devices updated")
-            time.sleep(31*60)  # Wait for 31 mins before starting a new device instance
+
+            time.sleep(35)  # Wait for 31 mins before starting a new device instance
     except Exception as e:
         print(f"Error: {e}")
 
