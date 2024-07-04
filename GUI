@@ -15,7 +15,7 @@ def submit_form():
         lon = float(longitude_entry.get())
         inputAlt = float(altitude_entry.get())
         api_token = api_key_entry.get()
-        device_Id = device_entry.get()
+        device_Id = int(device_entry.get())
         port_Id = port_entry.get()
 
         # Check if all fields are filled
@@ -26,6 +26,10 @@ def submit_form():
         # Check if the API key is valid (you can replace this with your own validation logic)
         if not validateAPIToken(api_token):
             messagebox.showerror("Error", "Invalid API key. Please check your token.")
+            return
+        
+        if not validDeviceId(device_Id):
+            messagebox.showerror("Error:", "Please enter a device ID between 0 and 4194302")
             return
 
         setAltitude(inputAlt)
@@ -58,8 +62,8 @@ def submit_form():
 
 # function to validate longitude input
 def validate_lon(lon):
-
     return -180 <= lon <= 180
+
 # function to validate latitude input
 def validate_lat(lat):
     return -90 <= lat <= 90
@@ -80,6 +84,10 @@ def validateAPIToken(WEATHER_API_TOKEN):
     except requests.RequestException:
         print("Error occurred while checking the API key.")
         return False    
+
+# check that ensures that device id does not exceed bacnet protocol limit
+def validDeviceId(device_Id):
+    return 0 <= device_Id <= 4194302
 
 # creates clock with live time widget
 def update_time():
@@ -113,7 +121,7 @@ class Page1(Page):
         # Row 1 Widgets
         latitude_label = tk.Label(self, text="Latitude (-90 <-> +90):")
         latitude_entry = tk.Entry(self)
-        device_label = tk.Label(self, text="BACnet Device ID:")
+        device_label = tk.Label(self, text="BACnet Device ID (0 - 4194302):")
         device_entry = tk.Entry(self)
         latitude_label.grid(row=1, column=0, sticky="w", pady=(10,0))
         latitude_entry.grid(row=1, column=1, sticky="w", pady=(10,0))
@@ -151,30 +159,30 @@ class Page1(Page):
         api_key_entry.grid(row=5, column=3, sticky="w", pady=(10,0))
 
         # Row 6 widgets
-        api2_label = tk.Label(self, text="API Src 2:")
-        api2_checkbox = tk.Checkbutton(self)
-        api2_entry = tk.Entry(self)
-        api2_key_label = tk.Label(self, text="API Key:")
-        api2_label.grid(row=6, column=0, sticky="w")
-        api2_checkbox.grid(row=6, column=1, sticky="w")
-        api2_key_label.grid(row=6, column=2)
-        api2_entry.grid(row=6, column=3)
+        # api2_label = tk.Label(self, text="API Src 2:")
+        # api2_checkbox = tk.Checkbutton(self)
+        # api2_entry = tk.Entry(self)
+        # api2_key_label = tk.Label(self, text="API Key:")
+        # api2_label.grid(row=6, column=0, sticky="w")
+        # api2_checkbox.grid(row=6, column=1, sticky="w")
+        # api2_key_label.grid(row=6, column=2)
+        # api2_entry.grid(row=6, column=3)
 
-        # Row 7 widgets
-        api3_label = tk.Label(self, text="API Src 3:")
-        api3_checkbox = tk.Checkbutton(self)
-        api3_entry = tk.Entry(self)
-        api3_key_label = tk.Label(self, text="API Key:")
-        api3_label.grid(row=7, column=0, sticky="w")
-        api3_checkbox.grid(row=7, column=1, sticky="w")
-        api3_key_label.grid(row=7, column=2)
-        api3_entry.grid(row=7, column=3)
+        # # Row 7 widgets
+        # api3_label = tk.Label(self, text="API Src 3:")
+        # api3_checkbox = tk.Checkbutton(self)
+        # api3_entry = tk.Entry(self)
+        # api3_key_label = tk.Label(self, text="API Key:")
+        # api3_label.grid(row=7, column=0, sticky="w")
+        # api3_checkbox.grid(row=7, column=1, sticky="w")
+        # api3_key_label.grid(row=7, column=2)
+        # api3_entry.grid(row=7, column=3)
 
         # Row 8 widgets (Start and Stop buttons)
         start_button = tk.Button(self, text="START", width=5, height=2, bg="green", command=(submit_form))
         stop_button = tk.Button(self, text="STOP", width=5, height=2, bg="red")
-        start_button.grid(row=8, column=1, pady=(40,0))
-        stop_button.grid(row=8, column=3, pady=(40,0))
+        start_button.grid(row=8, column=1, pady=(60,0))
+        stop_button.grid(row=8, column=3, pady=(60,0))
 
 class Page2(Page):
     def __init__(self, *args, **kwargs):
@@ -191,13 +199,8 @@ class Page2(Page):
 
             # Create an Entry widget for each temperature value
             entry = tk.Entry(self, width=10)
-            entry.insert(0, "0")  # Initialize with 0
+            entry.insert(0, "0.00")  # Initialize with 0
             entry.grid(row=i + 1, column=1, padx=10, pady=(10, 0), sticky="w")
-
-
-
-
-
 
 
         # Create labels for humidity
@@ -213,7 +216,7 @@ class Page2(Page):
 
             # Create an Entry widget for each humidity value
             entry = tk.Entry(self, width=10)
-            entry.insert(0, "0")  # Initialize with 0
+            entry.insert(0, "0.00")  # Initialize with 0
             entry.grid(row=i + 1, column=3, padx=10, pady=(10, 0))
 
         # create labels for rows (dew point)
@@ -228,7 +231,7 @@ class Page2(Page):
 
             # Create an Entry widget for each humidity value
             entry = tk.Entry(self, width=10)
-            entry.insert(0, "0")  # Initialize with 0
+            entry.insert(0, "0.00")  # Initialize with 0
             entry.grid(row=i + 1, column=5, padx=10, pady=(10, 0))
 
         # create labels for rows (dew point)
@@ -243,7 +246,7 @@ class Page2(Page):
 
             # Create an Entry widget for each humidity value
             entry = tk.Entry(self, width=10)
-            entry.insert(0, "0")  # Initialize with 0
+            entry.insert(0, "0.00")  # Initialize with 0
             entry.grid(row=i + 1, column=7, padx=10, pady=(10, 0))
 
 
@@ -421,10 +424,3 @@ class MainView(tk.Frame):
 
         # Start updating the time
         update_time()  
-
-
-
-
-
-
-
