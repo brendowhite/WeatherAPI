@@ -8,7 +8,7 @@ import threading
 
 ########################### GUI FUNCTIONALITY ################################
 
-# function to collect user inputs from the form
+# function to collect user inputs from the form once "start" is pressed
 def submit_form():
     try:
         lat = float(latitude_entry.get())
@@ -19,7 +19,7 @@ def submit_form():
         port_Id = port_entry.get()
 
         # Check if all fields are filled
-        if not (lat and lon and inputAlt and api_token):
+        if not (lat and lon and inputAlt and api_token and device_Id and port_Id):
             messagebox.showerror("Error", "Please fill in all fields before submitting.")
             return
 
@@ -86,6 +86,7 @@ def update_time():
     current_time = time.strftime('Current Time: %H:%M:%S')
     clock_label.config(text=current_time)
     clock_label.after(1000,update_time)
+
 
 
 ######################################### GUI START #########################################
@@ -190,7 +191,14 @@ class Page2(Page):
 
             # Create an Entry widget for each temperature value
             entry = tk.Entry(self, width=10)
+            entry.insert(0, "0")  # Initialize with 0
             entry.grid(row=i + 1, column=1, padx=10, pady=(10, 0), sticky="w")
+
+
+
+
+
+
 
         # Create labels for humidity
         humidity_label = tk.Label(self, text="Humidity", font=("segoe", 10, "bold"))
@@ -205,6 +213,7 @@ class Page2(Page):
 
             # Create an Entry widget for each humidity value
             entry = tk.Entry(self, width=10)
+            entry.insert(0, "0")  # Initialize with 0
             entry.grid(row=i + 1, column=3, padx=10, pady=(10, 0))
 
         # create labels for rows (dew point)
@@ -219,6 +228,7 @@ class Page2(Page):
 
             # Create an Entry widget for each humidity value
             entry = tk.Entry(self, width=10)
+            entry.insert(0, "0")  # Initialize with 0
             entry.grid(row=i + 1, column=5, padx=10, pady=(10, 0))
 
         # create labels for rows (dew point)
@@ -233,6 +243,7 @@ class Page2(Page):
 
             # Create an Entry widget for each humidity value
             entry = tk.Entry(self, width=10)
+            entry.insert(0, "0")  # Initialize with 0
             entry.grid(row=i + 1, column=7, padx=10, pady=(10, 0))
 
 
@@ -412,12 +423,8 @@ class MainView(tk.Frame):
         update_time()  
 
 
-# if __name__ == "__main__":
-#     root = tk.Tk()
-#     main_view = MainView(root)  # Create an instance of your MainView
-#     main_view.pack(side="top", fill="both", expand=True)
-#     root.geometry("700x450")
-#     root.title("Weather API Fetching Virtual BACnet Device")
-#     root.resizable(False, False)
 
-#     root.mainloop()
+
+
+
+
