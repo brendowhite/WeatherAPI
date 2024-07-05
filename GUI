@@ -173,36 +173,70 @@ def runTextboxUpdates():
         currentdewpt = weather_data["current_dew_point"]
         currentdewpt_entry.delete(0, tk.END)  # Clear existing value
         currentdewpt_entry.insert(0, currentdewpt)
-        # maxdewpt = weather_data["max_humidity"]
-        # maxhumidity_entry.delete(0, tk.END)
-        # maxhumidity_entry.insert(0, maxhum)
-        # averagehum = weather_data["average_humidity"]
-        # averagehumidity_entry.delete(0, tk.END)
-        # averagehumidity_entry.insert(0, averagehum)
+        maxdewpt = weather_data["max_dewpt"]
+        maxdewpt_entry.delete(0, tk.END)
+        maxdewpt_entry.insert(0, maxdewpt)
+        averagedewpt = weather_data["avg_dewpt"]
+        averagedewpt_entry.delete(0, tk.END)
+        averagedewpt_entry.insert(0, averagedewpt)
         dewpt3hr = weather_data["dew_point3hr"]
         dewpt3hr_entry.delete(0, tk.END)
         dewpt3hr_entry.insert(0, dewpt3hr)
         dewpt6hr = weather_data["dew_point6hr"]
         dewpt6hr_entry.delete(0, tk.END)
         dewpt6hr_entry.insert(0, dewpt6hr)
-        dewpt9hr = weather_data["dew_point9hr"]#########
-        humid9hr_entry.delete(0, tk.END)
-        humid9hr_entry.insert(0, dewpt9hr)
-        humid12hr = weather_data["dew_point12hr"]
-        humid12hr_entry.delete(0, tk.END)
-        humid12hr_entry.insert(0, humid12hr)
-        humid15hr = weather_data["dew_point15hr"]
-        humid15hr_entry.delete(0, tk.END)
-        humid15hr_entry.insert(0, humid15hr)
-        humid18hr = weather_data["dew_point18hr"]
-        humid18hr_entry.delete(0, tk.END)
-        humid18hr_entry.insert(0, humid18hr)
-        humid21hr = weather_data["dew_point21hr"]
-        humid21hr_entry.delete(0, tk.END)
-        humid21hr_entry.insert(0, humid21hr)
-        humid24hr = weather_data["dew_point24hr"]
-        humid24hr_entry.delete(0, tk.END)
-        humid24hr_entry.insert(0, humid24hr)
+        dewpt9hr = weather_data["dew_point9hr"]
+        dewpt9hr_entry.delete(0, tk.END)
+        dewpt9hr_entry.insert(0, dewpt9hr)
+        dewpt12hr = weather_data["dew_point12hr"]
+        dewpt12hr_entry.delete(0, tk.END)
+        dewpt12hr_entry.insert(0, dewpt12hr)
+        dewpt15hr = weather_data["dew_point15hr"]
+        dewpt15hr_entry.delete(0, tk.END)
+        dewpt15hr_entry.insert(0, dewpt15hr)
+        dewpt18hr = weather_data["dew_point18hr"]
+        dewpt18hr_entry.delete(0, tk.END)
+        dewpt18hr_entry.insert(0, dewpt18hr)
+        dewpt21hr = weather_data["dew_point21hr"]
+        dewpt21hr_entry.delete(0, tk.END)
+        dewpt21hr_entry.insert(0, dewpt21hr)
+        dewpt24hr = weather_data["dew_point24hr"]
+        dewpt24hr_entry.delete(0, tk.END)
+        dewpt24hr_entry.insert(0, dewpt24hr)
+
+        currententhalpy = weather_data["current_enthalpy"]
+        currententhalpy_entry.delete(0, tk.END)  # Clear existing value
+        currententhalpy_entry.insert(0, currententhalpy)
+        maxenthalpy = weather_data["max_enthalpy"]
+        maxenthalpy_entry.delete(0, tk.END)
+        maxenthalpy_entry.insert(0, maxenthalpy)
+        averageenthalpy = weather_data["avg_enthalpy"]
+        averageenthalpy_entry.delete(0, tk.END)
+        averageenthalpy_entry.insert(0, averageenthalpy)
+        enthalpy3hr = weather_data["enthalpy3hr"]
+        enthalpy3hr_entry.delete(0, tk.END)
+        enthalpy3hr_entry.insert(0, enthalpy3hr)
+        enthalpy6hr = weather_data["enthalpy6hr"]
+        enthalpy6hr_entry.delete(0, tk.END)
+        enthalpy6hr_entry.insert(0, enthalpy6hr)
+        enthalpy9hr = weather_data["enthalpy9hr"]
+        enthalpy9hr_entry.delete(0, tk.END)
+        enthalpy9hr_entry.insert(0, enthalpy9hr)
+        enthalpy12hr = weather_data["enthalpy12hr"]
+        enthalpy12hr_entry.delete(0, tk.END)
+        enthalpy12hr_entry.insert(0, enthalpy12hr)
+        enthalpy15hr = weather_data["enthalpy15hr"]
+        enthalpy15hr_entry.delete(0, tk.END)
+        enthalpy15hr_entry.insert(0, enthalpy15hr)
+        enthalpy18hr = weather_data["enthalpy18hr"]
+        enthalpy18hr_entry.delete(0, tk.END)
+        enthalpy18hr_entry.insert(0, enthalpy18hr)
+        enthalpy21hr = weather_data["enthalpy21hr"]
+        enthalpy21hr_entry.delete(0, tk.END)
+        enthalpy21hr_entry.insert(0, enthalpy21hr)
+        enthalpy24hr = weather_data["enthalpy24hr"]
+        enthalpy24hr_entry.delete(0, tk.END)
+        enthalpy24hr_entry.insert(0, enthalpy24hr)
 
         time.sleep(31*60)
 
@@ -315,7 +349,9 @@ class Page2(Page):
         global temp3hr_entry, temp6hr_entry, temp9hr_entry, temp12hr_entry, temp15hr_entry, temp18hr_entry, temp21hr_entry, temp24hr_entry
         global humid3hr_entry, humid6hr_entry, humid9hr_entry, humid12hr_entry, humid15hr_entry, humid18hr_entry, humid21hr_entry, humid24hr_entry
         global dewpt3hr_entry, dewpt6hr_entry, dewpt9hr_entry, dewpt12hr_entry, dewpt15hr_entry, dewpt18hr_entry, dewpt21hr_entry, dewpt24hr_entry
-        
+        global currententhalpy_entry, maxenthalpy_entry, averageenthalpy_entry, enthalpy3hr_entry, enthalpy6hr_entry, enthalpy9hr_entry, enthalpy12hr_entry
+        global enthalpy15hr_entry, enthalpy18hr_entry, enthalpy21hr_entry, enthalpy24hr_entry
+
  # Create labels for the rows (temperature)
         temprow_labels = ["Current:", "Max:", "Average:"] + [f"+{i*3} hours:" for i in range(1, 9)]
 
@@ -325,27 +361,27 @@ class Page2(Page):
 
 
         # creation of temperature entry boxes    
-        currenttemp_entry = tk.Entry(self, width=10)
+        currenttemp_entry = tk.Entry(self, width=12)
         currenttemp_entry.grid(row=1, column=1, pady=(10,0))
-        maxtemp_entry = tk.Entry(self, width=10)
+        maxtemp_entry = tk.Entry(self, width=12)
         maxtemp_entry.grid(row=2, column=1, pady=(10,0))
-        averagetemp_entry = tk.Entry(self, width=10)
+        averagetemp_entry = tk.Entry(self, width=12)
         averagetemp_entry.grid(row=3, column=1, pady=(10,0))
-        temp3hr_entry = tk.Entry(self, width=10)
+        temp3hr_entry = tk.Entry(self, width=12)
         temp3hr_entry.grid(row=4, column=1, pady=(10,0))
-        temp6hr_entry = tk.Entry(self, width=10)
+        temp6hr_entry = tk.Entry(self, width=12)
         temp6hr_entry.grid(row=5, column=1, pady=(10,0))
-        temp9hr_entry = tk.Entry(self, width=10)
+        temp9hr_entry = tk.Entry(self, width=12)
         temp9hr_entry.grid(row=6, column=1, pady=(10,0))
-        temp12hr_entry = tk.Entry(self, width=10)
+        temp12hr_entry = tk.Entry(self, width=12)
         temp12hr_entry.grid(row=7, column=1, pady=(10,0))
-        temp15hr_entry = tk.Entry(self, width=10)
+        temp15hr_entry = tk.Entry(self, width=12)
         temp15hr_entry.grid(row=8, column=1, pady=(10,0))
-        temp18hr_entry = tk.Entry(self, width=10)
+        temp18hr_entry = tk.Entry(self, width=12)
         temp18hr_entry.grid(row=9, column=1, pady=(10,0))
-        temp21hr_entry = tk.Entry(self, width=10)
+        temp21hr_entry = tk.Entry(self, width=12)
         temp21hr_entry.grid(row=10, column=1, pady=(10,0))
-        temp24hr_entry = tk.Entry(self, width=10)
+        temp24hr_entry = tk.Entry(self, width=12)
         temp24hr_entry.grid(row=11, column=1, pady=(10,0))
 
 
@@ -361,27 +397,27 @@ class Page2(Page):
             row_label_widget.grid(row=i + 1, column=2, sticky="w", pady=(10, 0), padx=10)
 
         # creation of humidity entry boxes
-        currenthumidity_entry = tk.Entry(self, width=10)
+        currenthumidity_entry = tk.Entry(self, width=12)
         currenthumidity_entry.grid(row=1, column=3, pady=(10,0))
-        maxhumidity_entry = tk.Entry(self, width=10)
+        maxhumidity_entry = tk.Entry(self, width=12)
         maxhumidity_entry.grid(row=2, column=3, pady=(10,0))
-        averagehumidity_entry = tk.Entry(self, width=10)
+        averagehumidity_entry = tk.Entry(self, width=12)
         averagehumidity_entry.grid(row=3, column=3, pady=(10,0))
-        humid3hr_entry = tk.Entry(self, width=10)
+        humid3hr_entry = tk.Entry(self, width=12)
         humid3hr_entry.grid(row=4, column=3, pady=(10,0))
-        humid6hr_entry = tk.Entry(self, width=10)
+        humid6hr_entry = tk.Entry(self, width=12)
         humid6hr_entry.grid(row=5, column=3, pady=(10,0))
-        humid9hr_entry = tk.Entry(self, width=10)
+        humid9hr_entry = tk.Entry(self, width=12)
         humid9hr_entry.grid(row=6, column=3, pady=(10,0))
-        humid12hr_entry = tk.Entry(self, width=10)
+        humid12hr_entry = tk.Entry(self, width=12)
         humid12hr_entry.grid(row=7, column=3, pady=(10,0))
-        humid15hr_entry = tk.Entry(self, width=10)
+        humid15hr_entry = tk.Entry(self, width=12)
         humid15hr_entry.grid(row=8, column=3, pady=(10,0))
-        humid18hr_entry = tk.Entry(self, width=10)
+        humid18hr_entry = tk.Entry(self, width=12)
         humid18hr_entry.grid(row=9, column=3, pady=(10,0))
-        humid21hr_entry = tk.Entry(self, width=10)
+        humid21hr_entry = tk.Entry(self, width=12)
         humid21hr_entry.grid(row=10, column=3, pady=(10,0))
-        humid24hr_entry = tk.Entry(self, width=10)
+        humid24hr_entry = tk.Entry(self, width=12)
         humid24hr_entry.grid(row=11, column=3, pady=(10,0))
 
 
@@ -396,30 +432,30 @@ class Page2(Page):
             row_label_widget.grid(row=i + 1, column=4, sticky="w", pady=(10, 0), padx=10)
 
         # create boxes for dew pt.
-        currentdewpt_entry = tk.Entry(self, width=10)
+        currentdewpt_entry = tk.Entry(self, width=12)
         currentdewpt_entry.grid(row=1, column=5, pady=(10,0))
-        maxdewpt_entry = tk.Entry(self, width=10)
+        maxdewpt_entry = tk.Entry(self, width=12)
         maxdewpt_entry.grid(row=2, column=5, pady=(10,0))
-        averagedewpt_entry = tk.Entry(self, width=10)
+        averagedewpt_entry = tk.Entry(self, width=12)
         averagedewpt_entry.grid(row=3, column=5, pady=(10,0))
-        dewpt3hr_entry = tk.Entry(self, width=10)
+        dewpt3hr_entry = tk.Entry(self, width=12)
         dewpt3hr_entry.grid(row=4, column=5, pady=(10,0))
-        dewpt6hr_entry = tk.Entry(self, width=10)
+        dewpt6hr_entry = tk.Entry(self, width=12)
         dewpt6hr_entry.grid(row=5, column=5, pady=(10,0))
-        dewpt9hr_entry = tk.Entry(self, width=10)
+        dewpt9hr_entry = tk.Entry(self, width=12)
         dewpt9hr_entry.grid(row=6, column=5, pady=(10,0))
-        dewpt12hr_entry = tk.Entry(self, width=10)
+        dewpt12hr_entry = tk.Entry(self, width=12)
         dewpt12hr_entry.grid(row=7, column=5, pady=(10,0))
-        dewpt15hr_entry = tk.Entry(self, width=10)
+        dewpt15hr_entry = tk.Entry(self, width=12)
         dewpt15hr_entry.grid(row=8, column=5, pady=(10,0))
-        dewpt18hr_entry = tk.Entry(self, width=10)
+        dewpt18hr_entry = tk.Entry(self, width=12)
         dewpt18hr_entry.grid(row=9, column=5, pady=(10,0))
-        dewpt21hr_entry = tk.Entry(self, width=10)
+        dewpt21hr_entry = tk.Entry(self, width=12)
         dewpt21hr_entry.grid(row=10, column=5, pady=(10,0))
-        dewpt24hr_entry = tk.Entry(self, width=10)
+        dewpt24hr_entry = tk.Entry(self, width=12)
         dewpt24hr_entry.grid(row=11, column=5, pady=(10,0))
 
-        # create labels for rows (dew point)
+        # create labels for rows (enthalpy point)
         enth_label = tk.Label(self, text="Enthalpy", font=("segoe", 10, "bold"))
         enth_label.grid(row=0, column=6, pady=(10, 0), padx=10)
 
@@ -429,6 +465,28 @@ class Page2(Page):
             row_label_widget = tk.Label(self, text=row_label)
             row_label_widget.grid(row=i + 1, column=6, sticky="w", pady=(10, 0), padx=10)
 
+        currententhalpy_entry = tk.Entry(self, width=12)
+        currententhalpy_entry.grid(row=1, column=7, pady=(10,0))
+        maxenthalpy_entry = tk.Entry(self, width=12)
+        maxenthalpy_entry.grid(row=2, column=7, pady=(10,0))
+        averageenthalpy_entry = tk.Entry(self, width=12)
+        averageenthalpy_entry.grid(row=3, column=7, pady=(10,0))
+        enthalpy3hr_entry = tk.Entry(self, width=12)
+        enthalpy3hr_entry.grid(row=4, column=7, pady=(10,0))
+        enthalpy6hr_entry = tk.Entry(self, width=12)
+        enthalpy6hr_entry.grid(row=5, column=7, pady=(10,0))
+        enthalpy9hr_entry = tk.Entry(self, width=12)
+        enthalpy9hr_entry.grid(row=6, column=7, pady=(10,0))
+        enthalpy12hr_entry = tk.Entry(self, width=12)
+        enthalpy12hr_entry.grid(row=7, column=7, pady=(10,0))
+        enthalpy15hr_entry = tk.Entry(self, width=12)
+        enthalpy15hr_entry.grid(row=8, column=7, pady=(10,0))
+        enthalpy18hr_entry = tk.Entry(self, width=12)
+        enthalpy18hr_entry.grid(row=9, column=7, pady=(10,0))
+        enthalpy21hr_entry = tk.Entry(self, width=12)
+        enthalpy21hr_entry.grid(row=10, column=7, pady=(10,0))
+        enthalpy24hr_entry = tk.Entry(self, width=12)
+        enthalpy24hr_entry.grid(row=11, column=7, pady=(10,0))
 
 
 class Page3(Page):
