@@ -76,8 +76,8 @@ def enthalpyCalc(temp, humidity, altitude):
 def fetchWeatherData(lat, lon, api_token):
     # define global variables to be used in updating analog_values on BACnet device
     global current_temperature, humidity, current_dew_point, current_enthalpy, hourly_temperatures, hourly_humidity, max_temperature, average_temperature, average_humidity, max_humidity
-    global dew_point3hr, dew_point6hr, dew_point9hr, dew_point12hr, dew_point15hr, dew_point18hr, dew_point21hr, dew_point24hr
-    global enthalpy3hr, enthalpy6hr, enthalpy9hr, enthalpy12hr, enthalpy15hr, enthalpy18hr, enthalpy21hr, enthalpy24hr
+    global dew_point3hr, dew_point6hr, dew_point9hr, dew_point12hr, dew_point15hr, dew_point18hr, dew_point21hr, dew_point24hr, averageEnthalpy, averageDewpt
+    global enthalpy3hr, enthalpy6hr, enthalpy9hr, enthalpy12hr, enthalpy15hr, enthalpy18hr, enthalpy21hr, enthalpy24hr, maximumDewPt, maximumEnthalpy
  
     # Open Weather Map API with 3 arguments, latitude, longitude and weather api token. Metric by default
     url = f'http://api.openweathermap.org/data/2.5/forecast?lat={lat}&lon={lon}&units=metric&appid={api_token}'
@@ -115,6 +115,13 @@ def fetchWeatherData(lat, lon, api_token):
         enthalpy18hr = enthalpyCalc(hourly_temperatures[6], hourly_humidity[6], altitude)
         enthalpy21hr = enthalpyCalc(hourly_temperatures[7], hourly_humidity[7], altitude)
         enthalpy24hr = enthalpyCalc(hourly_temperatures[8], hourly_humidity[8], altitude)
+
+        hourlydewpoint = [current_dew_point, dew_point3hr,dew_point6hr, dew_point9hr, dew_point12hr, dew_point15hr, dew_point18hr, dew_point21hr, dew_point24hr]
+        maximumDewPt = max(hourlydewpoint)
+        hourlyEnthalpy = [current_enthalpy, enthalpy3hr, enthalpy6hr, enthalpy9hr, enthalpy12hr, enthalpy15hr, enthalpy18hr, enthalpy21hr, enthalpy24hr]
+        maximumEnthalpy = max(hourlyEnthalpy)
+        averageDewpt = sum(hourlydewpoint) / len(hourlydewpoint)
+        averageEnthalpy = sum(hourlyEnthalpy) / len(hourlyEnthalpy)
 
         print(f"Current Temperature: {current_temperature} °C")
         print(f"Current Humidity: {humidity} %")
@@ -164,7 +171,11 @@ def extractWeatherData():
            "enthalpy15hr":enthalpy15hr,
            "enthalpy18hr":enthalpy18hr,
            "enthalpy21hr":enthalpy21hr,
-           "enthalpy24hr":enthalpy24hr}
+           "enthalpy24hr":enthalpy24hr,
+           "max_dewpt": maximumDewPt,
+           "max_enthalpy":maximumEnthalpy,
+           "avg_dewpt":averageDewpt,
+           "avg_enthalpy":averageEnthalpy}
 
 
 
