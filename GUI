@@ -51,21 +51,13 @@ def submit_form():
         BACnetThread = threading.Thread(target=updateBACnetValues, args= (device_Id, port_Id))
         BACnetThread.start()
 
-
-        # Print the values
-        print("Valid latitude and longitude values:")
-        print(f"Latitude: {lat}")
-        print(f"Longitude: {lon}")
-        print(f"Altitude: {inputAlt}")
-        print(f"Weather API Key: {api_token}")
-        # print(f"BACnet Device ID: {virtual_device}")
-
+        updateTextBoxesThread = threading.Thread(target=runTextboxUpdates)
+        updateTextBoxesThread.start()
     except ValueError:
         messagebox.showerror("Error", "Invalid input! Please enter valid numeric values for latitude, longitude, and altitude.")
         # Reset lat and lon to None
         lat = None
         lon = None
-
 
 # function to validate longitude input
 def validate_lon(lon):
@@ -103,6 +95,118 @@ def update_time():
     clock_label.after(1000,update_time)
 
 
+# functions relating to updating the weather values with checkbox
+def runTextboxUpdates():
+    # if openweather_api_checkbox_var.get():
+    while True:
+        weather_data = extractWeatherData()
+        # clear and enter the current temp data
+        current_temp = weather_data["current_temperature"]
+        currenttemp_entry.delete(0, tk.END)  # Clear existing value
+        currenttemp_entry.insert(0, current_temp)
+        maxtemp = weather_data["max_temperature"]
+        maxtemp_entry.delete(0, tk.END)
+        maxtemp_entry.insert(0, maxtemp)
+        averageTemp = weather_data["average_temperature"]
+        averagetemp_entry.delete(0, tk.END)
+        averagetemp_entry.insert(0, averageTemp)
+        temp3hr = weather_data["temp3hr"]
+        temp3hr_entry.delete(0, tk.END)
+        temp3hr_entry.insert(0, temp3hr)
+        temp6hr = weather_data["temp6hr"]
+        temp6hr_entry.delete(0, tk.END)
+        temp6hr_entry.insert(0, temp6hr)
+        temp9hr = weather_data["temp9hr"]
+        temp9hr_entry.delete(0, tk.END)
+        temp9hr_entry.insert(0, temp9hr)
+        temp12hr = weather_data["temp12hr"]
+        temp12hr_entry.delete(0, tk.END)
+        temp12hr_entry.insert(0, temp12hr)
+        temp15hr = weather_data["temp15hr"]
+        temp15hr_entry.delete(0, tk.END)
+        temp15hr_entry.insert(0, temp15hr)
+        temp18hr = weather_data["temp18hr"]
+        temp18hr_entry.delete(0, tk.END)
+        temp18hr_entry.insert(0, temp18hr)
+        temp21hr = weather_data["temp21hr"]
+        temp21hr_entry.delete(0, tk.END)
+        temp21hr_entry.insert(0, temp21hr)
+        temp24hr = weather_data["temp24hr"]
+        temp24hr_entry.delete(0, tk.END)
+        temp24hr_entry.insert(0, temp24hr)
+        # clear and insert current humidity data
+        currenthum = weather_data["humidity"]
+        currenthumidity_entry.delete(0, tk.END)  # Clear existing value
+        currenthumidity_entry.insert(0, currenthum)
+        maxhum = weather_data["max_humidity"]
+        maxhumidity_entry.delete(0, tk.END)
+        maxhumidity_entry.insert(0, maxhum)
+        averagehum = weather_data["average_humidity"]
+        averagehumidity_entry.delete(0, tk.END)
+        averagehumidity_entry.insert(0, averagehum)
+        humid3hr = weather_data["hum3hr"]
+        humid3hr_entry.delete(0, tk.END)
+        humid3hr_entry.insert(0, humid3hr)
+        humid6hr = weather_data["hum6hr"]
+        humid6hr_entry.delete(0, tk.END)
+        humid6hr_entry.insert(0, humid6hr)
+        humid9hr = weather_data["hum9hr"]
+        humid9hr_entry.delete(0, tk.END)
+        humid9hr_entry.insert(0, humid9hr)
+        humid12hr = weather_data["hum12hr"]
+        humid12hr_entry.delete(0, tk.END)
+        humid12hr_entry.insert(0, humid12hr)
+        humid15hr = weather_data["hum15hr"]
+        humid15hr_entry.delete(0, tk.END)
+        humid15hr_entry.insert(0, humid15hr)
+        humid18hr = weather_data["hum18hr"]
+        humid18hr_entry.delete(0, tk.END)
+        humid18hr_entry.insert(0, humid18hr)
+        humid21hr = weather_data["hum21hr"]
+        humid21hr_entry.delete(0, tk.END)
+        humid21hr_entry.insert(0, humid21hr)
+        humid24hr = weather_data["hum24hr"]
+        humid24hr_entry.delete(0, tk.END)
+        humid24hr_entry.insert(0, humid24hr)
+
+        # clear and insert the values for dew point
+        currentdewpt = weather_data["current_dew_point"]
+        currentdewpt_entry.delete(0, tk.END)  # Clear existing value
+        currentdewpt_entry.insert(0, currentdewpt)
+        # maxdewpt = weather_data["max_humidity"]
+        # maxhumidity_entry.delete(0, tk.END)
+        # maxhumidity_entry.insert(0, maxhum)
+        # averagehum = weather_data["average_humidity"]
+        # averagehumidity_entry.delete(0, tk.END)
+        # averagehumidity_entry.insert(0, averagehum)
+        dewpt3hr = weather_data["dew_point3hr"]
+        dewpt3hr_entry.delete(0, tk.END)
+        dewpt3hr_entry.insert(0, dewpt3hr)
+        dewpt6hr = weather_data["dew_point6hr"]
+        dewpt6hr_entry.delete(0, tk.END)
+        dewpt6hr_entry.insert(0, dewpt6hr)
+        dewpt9hr = weather_data["dew_point9hr"]#########
+        humid9hr_entry.delete(0, tk.END)
+        humid9hr_entry.insert(0, dewpt9hr)
+        humid12hr = weather_data["dew_point12hr"]
+        humid12hr_entry.delete(0, tk.END)
+        humid12hr_entry.insert(0, humid12hr)
+        humid15hr = weather_data["dew_point15hr"]
+        humid15hr_entry.delete(0, tk.END)
+        humid15hr_entry.insert(0, humid15hr)
+        humid18hr = weather_data["dew_point18hr"]
+        humid18hr_entry.delete(0, tk.END)
+        humid18hr_entry.insert(0, humid18hr)
+        humid21hr = weather_data["dew_point21hr"]
+        humid21hr_entry.delete(0, tk.END)
+        humid21hr_entry.insert(0, humid21hr)
+        humid24hr = weather_data["dew_point24hr"]
+        humid24hr_entry.delete(0, tk.END)
+        humid24hr_entry.insert(0, humid24hr)
+
+        time.sleep(31*60)
+
+
 
 ######################################### GUI START #########################################
 
@@ -125,6 +229,8 @@ class Page1(Page):
         global altitude_entry
         global port_entry
         global device_entry
+        global openweather_api_checkbox
+        global openweather_api_checkbox_var
         # Row 1 Widgets
         latitude_label = tk.Label(self, text="Latitude (-90 <-> +90):")
         latitude_entry = tk.Entry(self)
@@ -157,11 +263,17 @@ class Page1(Page):
 
         # Open weather widgets (R5)
         openweather_api_label = tk.Label(self, text="Open Weather API:", )
-        openweather_api_checkbox = tk.Checkbutton(self)
+
         api_key_label = tk.Label(self, text="API Key:")
         api_key_entry = tk.Entry(self)
+
+        # create check box
+        openweather_api_checkbox_var = tk.BooleanVar()
+        openweather_api_checkbox = tk.Checkbutton(self, variable=openweather_api_checkbox_var)  #command=runTextboxUpdates
         openweather_api_label.grid(row=5, column=0, sticky="w", pady=(10,0))
         openweather_api_checkbox.grid(row=5, column=1, sticky="w", pady=(10,0))
+
+
         api_key_label.grid(row=5, column=2, sticky="w", pady=(10,0))
         api_key_entry.grid(row=5, column=3, sticky="w", pady=(10,0))
 
@@ -197,32 +309,44 @@ class Page2(Page):
         templabel = tk.Label(self, text="Temperature", font=("segoe", 10, "bold"))
         templabel.grid(row=0, column=0, columnspan=4, pady=(10, 0), sticky="w")
 
-        # Create an Entry widget for displaying the current temperature
-        self.current_temp_entry = tk.Entry(self, width=10)
-        self.current_temp_entry.grid(row=1, column=1, sticky="w", pady=(10, 0))
+        global currenttemp_entry, currenthumidity_entry, currentdewpt_entry
+        global maxtemp_entry, maxhumidity_entry, maxdewpt_entry
+        global averagetemp_entry, averagehumidity_entry, averagedewpt_entry
+        global temp3hr_entry, temp6hr_entry, temp9hr_entry, temp12hr_entry, temp15hr_entry, temp18hr_entry, temp21hr_entry, temp24hr_entry
+        global humid3hr_entry, humid6hr_entry, humid9hr_entry, humid12hr_entry, humid15hr_entry, humid18hr_entry, humid21hr_entry, humid24hr_entry
+        global dewpt3hr_entry, dewpt6hr_entry, dewpt9hr_entry, dewpt12hr_entry, dewpt15hr_entry, dewpt18hr_entry, dewpt21hr_entry, dewpt24hr_entry
+        
+ # Create labels for the rows (temperature)
+        temprow_labels = ["Current:", "Max:", "Average:"] + [f"+{i*3} hours:" for i in range(1, 9)]
 
-        # Start updating the weather data
-        self.updateWeatherData()
-
-    def updateWeatherData(self):
-        try:
-            weather_data = extractWeatherData()  # Replace with your actual function
-            self.current_temp_entry.delete(0, tk.END)
-            self.current_temp_entry.insert(0, str(weather_data["current_temperature"]))
-            self.after(30000, self.updateWeatherData)  # Update every 30 seconds
-        except Exception as e:
-            # Handle exceptions (e.g., display an error message)
-            print(f"Error fetching weather data: {e}")
-
-        # Create labels for the rows
-        row_labels = ["Current:", "Max:", "Average:"] + [f"+{i*3} hours:" for i in range(1, 9)]
-
-        for i, row_label in enumerate(row_labels):
+        for i, row_label in enumerate(temprow_labels):
             row_label_widget = tk.Label(self, text=row_label)
-            row_label_widget.grid(row=i + 1, column=0, sticky="w", pady=(10, 0))
+            row_label_widget.grid(row=i + 1, column=0, sticky="w", pady=(10, 0), padx=10)
 
 
-
+        # creation of temperature entry boxes    
+        currenttemp_entry = tk.Entry(self, width=10)
+        currenttemp_entry.grid(row=1, column=1, pady=(10,0))
+        maxtemp_entry = tk.Entry(self, width=10)
+        maxtemp_entry.grid(row=2, column=1, pady=(10,0))
+        averagetemp_entry = tk.Entry(self, width=10)
+        averagetemp_entry.grid(row=3, column=1, pady=(10,0))
+        temp3hr_entry = tk.Entry(self, width=10)
+        temp3hr_entry.grid(row=4, column=1, pady=(10,0))
+        temp6hr_entry = tk.Entry(self, width=10)
+        temp6hr_entry.grid(row=5, column=1, pady=(10,0))
+        temp9hr_entry = tk.Entry(self, width=10)
+        temp9hr_entry.grid(row=6, column=1, pady=(10,0))
+        temp12hr_entry = tk.Entry(self, width=10)
+        temp12hr_entry.grid(row=7, column=1, pady=(10,0))
+        temp15hr_entry = tk.Entry(self, width=10)
+        temp15hr_entry.grid(row=8, column=1, pady=(10,0))
+        temp18hr_entry = tk.Entry(self, width=10)
+        temp18hr_entry.grid(row=9, column=1, pady=(10,0))
+        temp21hr_entry = tk.Entry(self, width=10)
+        temp21hr_entry.grid(row=10, column=1, pady=(10,0))
+        temp24hr_entry = tk.Entry(self, width=10)
+        temp24hr_entry.grid(row=11, column=1, pady=(10,0))
 
 
         # Create labels for humidity
@@ -236,9 +360,30 @@ class Page2(Page):
             row_label_widget = tk.Label(self, text=row_label)
             row_label_widget.grid(row=i + 1, column=2, sticky="w", pady=(10, 0), padx=10)
 
-            # Create an Entry widget for each humidity value
-            entry = tk.Entry(self, width=10)
-            entry.grid(row=i + 1, column=3, padx=10, pady=(10, 0))
+        # creation of humidity entry boxes
+        currenthumidity_entry = tk.Entry(self, width=10)
+        currenthumidity_entry.grid(row=1, column=3, pady=(10,0))
+        maxhumidity_entry = tk.Entry(self, width=10)
+        maxhumidity_entry.grid(row=2, column=3, pady=(10,0))
+        averagehumidity_entry = tk.Entry(self, width=10)
+        averagehumidity_entry.grid(row=3, column=3, pady=(10,0))
+        humid3hr_entry = tk.Entry(self, width=10)
+        humid3hr_entry.grid(row=4, column=3, pady=(10,0))
+        humid6hr_entry = tk.Entry(self, width=10)
+        humid6hr_entry.grid(row=5, column=3, pady=(10,0))
+        humid9hr_entry = tk.Entry(self, width=10)
+        humid9hr_entry.grid(row=6, column=3, pady=(10,0))
+        humid12hr_entry = tk.Entry(self, width=10)
+        humid12hr_entry.grid(row=7, column=3, pady=(10,0))
+        humid15hr_entry = tk.Entry(self, width=10)
+        humid15hr_entry.grid(row=8, column=3, pady=(10,0))
+        humid18hr_entry = tk.Entry(self, width=10)
+        humid18hr_entry.grid(row=9, column=3, pady=(10,0))
+        humid21hr_entry = tk.Entry(self, width=10)
+        humid21hr_entry.grid(row=10, column=3, pady=(10,0))
+        humid24hr_entry = tk.Entry(self, width=10)
+        humid24hr_entry.grid(row=11, column=3, pady=(10,0))
+
 
         # create labels for rows (dew point)
         dewpt_label = tk.Label(self, text="Dew Point", font=("segoe", 10, "bold"))
@@ -250,9 +395,29 @@ class Page2(Page):
             row_label_widget = tk.Label(self, text=row_label)
             row_label_widget.grid(row=i + 1, column=4, sticky="w", pady=(10, 0), padx=10)
 
-            # Create an Entry widget for each humidity value
-            entry = tk.Entry(self, width=10)
-            entry.grid(row=i + 1, column=5, padx=10, pady=(10, 0))
+        # create boxes for dew pt.
+        currentdewpt_entry = tk.Entry(self, width=10)
+        currentdewpt_entry.grid(row=1, column=5, pady=(10,0))
+        maxdewpt_entry = tk.Entry(self, width=10)
+        maxdewpt_entry.grid(row=2, column=5, pady=(10,0))
+        averagedewpt_entry = tk.Entry(self, width=10)
+        averagedewpt_entry.grid(row=3, column=5, pady=(10,0))
+        dewpt3hr_entry = tk.Entry(self, width=10)
+        dewpt3hr_entry.grid(row=4, column=5, pady=(10,0))
+        dewpt6hr_entry = tk.Entry(self, width=10)
+        dewpt6hr_entry.grid(row=5, column=5, pady=(10,0))
+        dewpt9hr_entry = tk.Entry(self, width=10)
+        dewpt9hr_entry.grid(row=6, column=5, pady=(10,0))
+        dewpt12hr_entry = tk.Entry(self, width=10)
+        dewpt12hr_entry.grid(row=7, column=5, pady=(10,0))
+        dewpt15hr_entry = tk.Entry(self, width=10)
+        dewpt15hr_entry.grid(row=8, column=5, pady=(10,0))
+        dewpt18hr_entry = tk.Entry(self, width=10)
+        dewpt18hr_entry.grid(row=9, column=5, pady=(10,0))
+        dewpt21hr_entry = tk.Entry(self, width=10)
+        dewpt21hr_entry.grid(row=10, column=5, pady=(10,0))
+        dewpt24hr_entry = tk.Entry(self, width=10)
+        dewpt24hr_entry.grid(row=11, column=5, pady=(10,0))
 
         # create labels for rows (dew point)
         enth_label = tk.Label(self, text="Enthalpy", font=("segoe", 10, "bold"))
@@ -264,9 +429,6 @@ class Page2(Page):
             row_label_widget = tk.Label(self, text=row_label)
             row_label_widget.grid(row=i + 1, column=6, sticky="w", pady=(10, 0), padx=10)
 
-            # Create an Entry widget for each humidity value
-            entry = tk.Entry(self, width=10)
-            entry.grid(row=i + 1, column=7, padx=10, pady=(10, 0))
 
 
 class Page3(Page):
