@@ -125,9 +125,23 @@ def fetchWeatherData(lat, lon, api_token):
         print("Error fetching initial weather data")
 
 def extractWeatherData():
-    return{"hourly_temperatures":hourly_temperatures,
+    return{"temp3hr":hourly_temperatures[1],
+           "temp6hr":hourly_temperatures[2],
+           "temp9hr":hourly_temperatures[3],
+           "temp12hr":hourly_temperatures[4],
+           "temp15hr":hourly_temperatures[5],
+           "temp18hr":hourly_temperatures[6],
+           "temp21hr":hourly_temperatures[7],
+           "temp24hr":hourly_temperatures[8],
            "current_temperature":current_temperature,
-           "hourly_humidity":hourly_humidity,
+           "hum3hr":hourly_humidity[1],
+           "hum6hr":hourly_humidity[2],
+           "hum9hr":hourly_humidity[3],
+           "hum12hr":hourly_humidity[4],
+           "hum15hr":hourly_humidity[5],
+           "hum18hr":hourly_humidity[6],
+           "hum21hr":hourly_humidity[7],
+           "hum24hr":hourly_humidity[8],
            "max_temperature":max_temperature,
            "max_humidity":max_humidity,
            "average_humidity":average_humidity,
@@ -152,10 +166,7 @@ def extractWeatherData():
            "enthalpy21hr":enthalpy21hr,
            "enthalpy24hr":enthalpy24hr}
 
-def updateExtractWeather():
-    while True:
-        extractWeatherData()
-        time.sleep(5)
+
 
 
 # # Function to fetch weather data periodically
@@ -164,7 +175,7 @@ def fetchWeatherPeriodically(lat, lon, api_token):
         print("Fetching weather data...")
         fetchWeatherData(lat, lon,api_token)
         print("Weather data fetched.")
-        time.sleep(30)  # sleep for 30 minutes
+        time.sleep(30*60)  # sleep for 30 minutes
 
 
 
@@ -519,7 +530,7 @@ def updateBACnetValues(device_Id, port_Id):
             bacnet_device["Maximum Humidity 24H"].presentValue=max_humidity
 
 
-            time.sleep(35)  # Wait for 31 mins before starting a new device instance
+            time.sleep(31*60)  # Wait for 31 mins before starting a new device instance
     except Exception as e:
         print(f"Error: {e}")
 
