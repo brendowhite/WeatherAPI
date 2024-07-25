@@ -8,6 +8,10 @@ import time
 import datetime
 
 current_time = datetime.datetime.now()
+import xml.etree.ElementTree as ET
+from xml.dom import minidom
+import threading
+
 
 # Global variables for weather data
 current_temperature = 0
@@ -40,19 +44,51 @@ enthalpy24hr = 0
 lat = None
 lon = None
 api_token = None
-# altitude = None
 device_Id = None
 port_Id = None
-
-
-# '0d5d2cfed28b5145804a9901a16c2b40'
+num_requests= 1
 # latitude = -33.785791
 # long = 151.121482
 
-def setAltitude(inputAlt):
+def readXMLSettings():
+    global lat
+    global lon
     global altitude
-    altitude = float(inputAlt)
-    return altitude
+    global api_token
+    global device_Id
+    global port_Id
+    global num_requests
+
+    xmlfile = 'C:\\BACnetWeatherFetchData\settings.xml'
+    tree = ET.parse(xmlfile)
+    root = tree.getroot()
+
+    # Extract values from the XML
+    lat = float(root.find('latitude').text)
+    lon = float(root.find('longitude').text)
+    altitude = float(root.find('altitude').text)
+    api_token = root.find('api_token').text
+    device_Id = int(root.find('device_Id').text)
+    port_Id = int(root.find('port_Id').text)
+    num_requests = int(root.find('num_requests').text)
+
+    print (lat)
+    print (lon)
+    print (altitude)
+    print (api_token)
+    print (device_Id)
+    print (port_Id)
+    print (num_requests)
+
+
+def setDailyRequests(num_requests):
+
+    # Number of requests per day calculation, this will just be thread calculation time
+    requests_sleep = 3600 / (num_requests / 24) # calculates the sleep time in seconds (1hr = 3600 secs)
+    return requests_sleep
+    # except ValueError:
+    #     return None
+    
 
 # Function to calculate dew point
 def dewPointCalc(temp, humidity, altitude):
@@ -123,71 +159,86 @@ def fetchWeatherData(lat, lon, api_token):
         averageDewpt = sum(hourlydewpoint) / len(hourlydewpoint)
         averageEnthalpy = sum(hourlyEnthalpy) / len(hourlyEnthalpy)
 
-        print(f"Current Temperature: {current_temperature} °C")
-        print(f"Current Humidity: {humidity} %")
-        print(f"Current Dew Point: {current_dew_point} °C")
-        print(f"Current Enthalpy: {current_enthalpy} kJ/kg")
-
     except KeyError:
         print("Error fetching initial weather data")
 
-def extractWeatherData():
-    return{"temp3hr":hourly_temperatures[1],
-           "temp6hr":hourly_temperatures[2],
-           "temp9hr":hourly_temperatures[3],
-           "temp12hr":hourly_temperatures[4],
-           "temp15hr":hourly_temperatures[5],
-           "temp18hr":hourly_temperatures[6],
-           "temp21hr":hourly_temperatures[7],
-           "temp24hr":hourly_temperatures[8],
-           "current_temperature":current_temperature,
-           "hum3hr":hourly_humidity[1],
-           "hum6hr":hourly_humidity[2],
-           "hum9hr":hourly_humidity[3],
-           "hum12hr":hourly_humidity[4],
-           "hum15hr":hourly_humidity[5],
-           "hum18hr":hourly_humidity[6],
-           "hum21hr":hourly_humidity[7],
-           "hum24hr":hourly_humidity[8],
-           "max_temperature":max_temperature,
-           "max_humidity":max_humidity,
-           "average_humidity":average_humidity,
-           "average_temperature":average_temperature,
-           "humidity":humidity,
-           "current_dew_point":current_dew_point,
-           "dew_point3hr":dew_point3hr,
-           "dew_point6hr":dew_point6hr,
-           "dew_point9hr":dew_point9hr,
-           "dew_point12hr":dew_point12hr,
-           "dew_point15hr":dew_point15hr,
-           "dew_point18hr":dew_point18hr,
-           "dew_point21hr":dew_point21hr,
-           "dew_point24hr":dew_point24hr,
-           "current_enthalpy":current_enthalpy,
-           "enthalpy3hr":enthalpy3hr,
-           "enthalpy6hr":enthalpy6hr,
-           "enthalpy9hr":enthalpy9hr,
-           "enthalpy12hr":enthalpy12hr,
-           "enthalpy15hr":enthalpy15hr,
-           "enthalpy18hr":enthalpy18hr,
-           "enthalpy21hr":enthalpy21hr,
-           "enthalpy24hr":enthalpy24hr,
-           "max_dewpt": maximumDewPt,
-           "max_enthalpy":maximumEnthalpy,
-           "avg_dewpt":averageDewpt,
-           "avg_enthalpy":averageEnthalpy}
+
+def writeXMLWeatherData():
+        # Define the data
+    data = {
+        "temp3hr": hourly_temperatures[1],
+        "temp6hr": hourly_temperatures[2],
+        "temp9hr": hourly_temperatures[3],
+        "temp12hr": hourly_temperatures[4],
+        "temp15hr": hourly_temperatures[5],
+        "temp18hr": hourly_temperatures[6],
+        "temp21hr": hourly_temperatures[7],
+        "temp24hr": hourly_temperatures[8],
+        "current_temperature": current_temperature,
+        "hum3hr": hourly_humidity[1],
+        "hum6hr": hourly_humidity[2],
+        "hum9hr": hourly_humidity[3],
+        "hum12hr": hourly_humidity[4],
+        "hum15hr": hourly_humidity[5],
+        "hum18hr": hourly_humidity[6],
+        "hum21hr": hourly_humidity[7],
+        "hum24hr": hourly_humidity[8],
+        "max_temperature": max_temperature,
+        "max_humidity": max_humidity,
+        "average_humidity": average_humidity,
+        "average_temperature": average_temperature,
+        "humidity": humidity,
+        "current_dew_point": current_dew_point,
+        "dew_point3hr": dew_point3hr,
+        "dew_point6hr": dew_point6hr,
+        "dew_point9hr": dew_point9hr,
+        "dew_point12hr": dew_point12hr,
+        "dew_point15hr": dew_point15hr,
+        "dew_point18hr": dew_point18hr,
+        "dew_point21hr": dew_point21hr,
+        "dew_point24hr": dew_point24hr,
+        "current_enthalpy": current_enthalpy,
+        "enthalpy3hr": enthalpy3hr,
+        "enthalpy6hr": enthalpy6hr,
+        "enthalpy9hr": enthalpy9hr,
+        "enthalpy12hr": enthalpy12hr,
+        "enthalpy15hr": enthalpy15hr,
+        "enthalpy18hr": enthalpy18hr,
+        "enthalpy21hr": enthalpy21hr,
+        "enthalpy24hr": enthalpy24hr,
+        "max_dewpt": maximumDewPt,
+        "max_enthalpy": maximumEnthalpy,
+        "avg_dewpt": averageDewpt,
+        "avg_enthalpy": averageEnthalpy
+    }
+    # Create an XML structure
+    root = ET.Element("weather_data")
+
+    # Add child elements for each key-value pair in the data dictionary
+    for key, value in data.items():
+        elem = ET.SubElement(root, key)
+        elem.text = str(value)
+
+    # Save the XML to a file
+    tree_str = ET.tostring(root, encoding="utf-8")
+    pretty_xml = minidom.parseString(tree_str).toprettyxml(indent="  ")
+
+    with open("C:\\BACnetWeatherFetchData\weather_data.xml", "w") as xml_file:
+        xml_file.write(pretty_xml)
 
 
-
-
-# # Function to fetch weather data periodically
-def fetchWeatherPeriodically(lat, lon, api_token):
+def fetchWeatherPeriodically():
     while True:
-        print("Fetching weather data...")
-        fetchWeatherData(lat, lon,api_token)
-        print("Weather data fetched.")
-        time.sleep(30*60)  # sleep for 30 minutes
+        readXMLSettings()
+        sleep_time = setDailyRequests(num_requests)
+        fetchWeatherData(lat, lon, api_token)
+        writeXMLWeatherData()
+        time.sleep(sleep_time)
 
+
+# Create a thread for periodic weather fetching
+weather_thread = threading.Thread(target=fetchWeatherPeriodically, daemon=True)
+weather_thread.start()
 
 
 # # Create the virtual BACnet device below, it will include a number of different analog_values for weather metrics
@@ -195,7 +246,7 @@ def start_device(device_Id, port_Id):
     virtualDevice = BAC0.lite(deviceId=device_Id, port=port_Id)
     time.sleep(1)
 
-    # Analog Value creation for BACnet device. This will 
+    # Analog Value creation for BACnet device 
     _new_objects = analog_value(
         instance=1,
         name="Current Temperature",
@@ -476,72 +527,94 @@ def start_device(device_Id, port_Id):
         presentValue=max_temperature,
         properties={"units":"degreesCelsius"}
     )
-
+    _new_objects = analog_value(
+        instance=41,
+        name="Average Enthalpy 24H",
+        description="Average Enthalpy in the next 24HR",
+        presentValue=averageEnthalpy,
+        properties={"units":"kilojoulesPerKilogram"}
+    )
+    _new_objects = analog_value(
+        instance=42,
+        name="Maximum Enthalpy 24H",
+        description="Max Enthalpy in the next 24HR",
+        presentValue=maximumEnthalpy,
+        properties={"units":"kilojoulesPerKilogram"}
+    )
+    _new_objects = analog_value(
+        instance=43,
+        name="Maximum Dew Point 24H",
+        description="Max Dew Point in the next 24HR",
+        presentValue=maximumDewPt,
+        properties={"units":"degreesCelsius"}
+    )
+    _new_objects = analog_value(
+        instance=44,
+        name="Average Dew Point 24H",
+        description="Average Dew Point in the next 24HR",
+        presentValue=averageDewpt,
+        properties={"units":"degreesCelsius"}
+    )
 
 # up to here
-
     _new_objects.add_objects_to_application(virtualDevice)
     return virtualDevice
 
+try:
 
-
-def updateBACnetValues(device_Id, port_Id):
-    try:
-        bacnet_device = start_device(device_Id, port_Id)
+    readXMLSettings()
+    bacnet_device = start_device(device_Id, port_Id)
     # run an infinite loop that updates current weather values
-        while True:
-
-        # Code below will update the weather data stored inside the BACnet device every 31 minutes
+    while True:
+        loop_sleep = setDailyRequests(num_requests)
+    # Code below will update the weather data stored inside the BACnet device every 31 minutes
     # update the current weather values for temp, humidity, dew pt and enthalpy
-
-            bacnet_device["Current Temperature"].presentValue = current_temperature
-            bacnet_device["Current Humidity"].presentValue = humidity
-            bacnet_device["Dew Point"].presentValue = current_dew_point
-            bacnet_device["Enthalpy"].presentValue = current_enthalpy
+        bacnet_device["Current Temperature"].presentValue = current_temperature
+        bacnet_device["Current Humidity"].presentValue = humidity
+        bacnet_device["Dew Point"].presentValue = current_dew_point
+        bacnet_device["Enthalpy"].presentValue = current_enthalpy
     # update the predicted temperature readings 
-            bacnet_device["Predicted Temperature +3hr"].presentValue=hourly_temperatures[1]
-            bacnet_device["Predicted Temperature +6hr"].presentValue=hourly_temperatures[2]
-            bacnet_device["Predicted Temperature +9hr"].presentValue=hourly_temperatures[3]
-            bacnet_device["Predicted Temperature +12hr"].presentValue=hourly_temperatures[4]
-            bacnet_device["Predicted Temperature +15hr"].presentValue=hourly_temperatures[5]
-            bacnet_device["Predicted Temperature +18hr"].presentValue=hourly_temperatures[6]
-            bacnet_device["Predicted Temperature +21hr"].presentValue=hourly_temperatures[7]
-            bacnet_device["Predicted Temperature +24hr"].presentValue=hourly_temperatures[8]
+        bacnet_device["Predicted Temperature +3hr"].presentValue=hourly_temperatures[1]
+        bacnet_device["Predicted Temperature +6hr"].presentValue=hourly_temperatures[2]
+        bacnet_device["Predicted Temperature +9hr"].presentValue=hourly_temperatures[3]
+        bacnet_device["Predicted Temperature +12hr"].presentValue=hourly_temperatures[4]
+        bacnet_device["Predicted Temperature +15hr"].presentValue=hourly_temperatures[5]
+        bacnet_device["Predicted Temperature +18hr"].presentValue=hourly_temperatures[6]
+        bacnet_device["Predicted Temperature +21hr"].presentValue=hourly_temperatures[7]
+        bacnet_device["Predicted Temperature +24hr"].presentValue=hourly_temperatures[8]
     # update the predicted humidity readings
-            bacnet_device["Predicted Humidity +3hr"].presentValue=hourly_humidity[1]
-            bacnet_device["Predicted Humidity +6hr"].presentValue=hourly_humidity[2]
-            bacnet_device["Predicted Humidity +9hr"].presentValue=hourly_humidity[3]
-            bacnet_device["Predicted Humidity +12hr"].presentValue=hourly_humidity[4]
-            bacnet_device["Predicted Humidity +15hr"].presentValue=hourly_humidity[5]
-            bacnet_device["Predicted Humidity +18hr"].presentValue=hourly_humidity[6]
-            bacnet_device["Predicted Humidity +21hr"].presentValue=hourly_humidity[7]
-            bacnet_device["Predicted Humidity +24hr"].presentValue=hourly_humidity[8]
+        bacnet_device["Predicted Humidity +3hr"].presentValue=hourly_humidity[1]
+        bacnet_device["Predicted Humidity +6hr"].presentValue=hourly_humidity[2]
+        bacnet_device["Predicted Humidity +9hr"].presentValue=hourly_humidity[3]
+        bacnet_device["Predicted Humidity +12hr"].presentValue=hourly_humidity[4]
+        bacnet_device["Predicted Humidity +15hr"].presentValue=hourly_humidity[5]
+        bacnet_device["Predicted Humidity +18hr"].presentValue=hourly_humidity[6]
+        bacnet_device["Predicted Humidity +21hr"].presentValue=hourly_humidity[7]
+        bacnet_device["Predicted Humidity +24hr"].presentValue=hourly_humidity[8]
     # update the enthalty prediction readings
-            bacnet_device["Predicted Enthalpy +3hr"].presentValue=enthalpy3hr
-            bacnet_device["Predicted Enthalpy +6hr"].presentValue=enthalpy6hr
-            bacnet_device["Predicted Enthalpy +9hr"].presentValue=enthalpy9hr
-            bacnet_device["Predicted Enthalpy +12hr"].presentValue=enthalpy12hr
-            bacnet_device["Predicted Enthalpy +15hr"].presentValue=enthalpy15hr
-            bacnet_device["Predicted Enthalpy +18hr"].presentValue=enthalpy18hr
-            bacnet_device["Predicted Enthalpy +21hr"].presentValue=enthalpy21hr
-            bacnet_device["Predicted Enthalpy +24hr"].presentValue=enthalpy24hr
+        bacnet_device["Predicted Enthalpy +3hr"].presentValue=enthalpy3hr
+        bacnet_device["Predicted Enthalpy +6hr"].presentValue=enthalpy6hr
+        bacnet_device["Predicted Enthalpy +9hr"].presentValue=enthalpy9hr
+        bacnet_device["Predicted Enthalpy +12hr"].presentValue=enthalpy12hr
+        bacnet_device["Predicted Enthalpy +15hr"].presentValue=enthalpy15hr
+        bacnet_device["Predicted Enthalpy +18hr"].presentValue=enthalpy18hr
+        bacnet_device["Predicted Enthalpy +21hr"].presentValue=enthalpy21hr
+        bacnet_device["Predicted Enthalpy +24hr"].presentValue=enthalpy24hr
     # update the dew point readings
-            bacnet_device["Predicted Dew Point +3hr"].presentValue=dew_point3hr
-            bacnet_device["Predicted Dew Point +6hr"].presentValue=dew_point6hr
-            bacnet_device["Predicted Dew Point +9hr"].presentValue=dew_point9hr
-            bacnet_device["Predicted Dew Point +12hr"].presentValue=dew_point12hr
-            bacnet_device["Predicted Dew Point +15hr"].presentValue=dew_point15hr
-            bacnet_device["Predicted Dew Point +18hr"].presentValue=dew_point18hr
-            bacnet_device["Predicted Dew Point +21hr"].presentValue=dew_point21hr
-            bacnet_device["Predicted Dew Point +24hr"].presentValue=dew_point24hr
+        bacnet_device["Predicted Dew Point +3hr"].presentValue=dew_point3hr
+        bacnet_device["Predicted Dew Point +6hr"].presentValue=dew_point6hr
+        bacnet_device["Predicted Dew Point +9hr"].presentValue=dew_point9hr
+        bacnet_device["Predicted Dew Point +12hr"].presentValue=dew_point12hr
+        bacnet_device["Predicted Dew Point +15hr"].presentValue=dew_point15hr
+        bacnet_device["Predicted Dew Point +18hr"].presentValue=dew_point18hr
+        bacnet_device["Predicted Dew Point +21hr"].presentValue=dew_point21hr
+        bacnet_device["Predicted Dew Point +24hr"].presentValue=dew_point24hr
     # update the avg and max humidity and temp readings
-            bacnet_device["Average Humidity 24H"].presentValue=average_humidity
-            bacnet_device["Average Temperature 24H"].presentValue=average_temperature
-            bacnet_device["Maximum Temperature 24H"].presentValue=max_temperature
-            bacnet_device["Maximum Humidity 24H"].presentValue=max_humidity
+        bacnet_device["Average Humidity 24H"].presentValue=average_humidity
+        bacnet_device["Average Temperature 24H"].presentValue=average_temperature
+        bacnet_device["Maximum Temperature 24H"].presentValue=max_temperature
+        bacnet_device["Maximum Humidity 24H"].presentValue=max_humidity
 
-
-            time.sleep(31*60)  # Wait for 31 mins before starting a new device instance
-    except Exception as e:
+        time.sleep(loop_sleep + 5) 
+except Exception as e:
         print(f"Error: {e}")
-
