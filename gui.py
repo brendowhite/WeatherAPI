@@ -2,8 +2,11 @@ import tkinter as tk
 import time
 from tkinter import messagebox
 import requests
-from weatherFetch import fetchWeatherData, fetchWeatherPeriodically, updateBACnetValues, setAltitude, extractWeatherData
 import threading
+import sys
+import xml.etree.ElementTree as ET
+import xml.dom.minidom as minidom
+import os
 
 
 ########################### GUI FUNCTIONALITY ################################
@@ -17,6 +20,7 @@ def submit_form():
         api_token = api_key_entry.get()
         device_Id = int(device_entry.get())
         port_Id = port_entry.get()
+        num_requests = int(requests_entry.get())
 
         if not validate_lat(lat):
             messagebox.showerror("Error", "Invalid latitude, please enter a value between -90 and 90 degrees.")
@@ -39,25 +43,35 @@ def submit_form():
             messagebox.showerror("Error", "Please enter a device ID between 0 and 4194302")
             return
 
-        setAltitude(inputAlt)
-        # Pass the values to backend functions
-        fetchWeatherData(lat, lon, api_token)
+        if not openweather_api_checkbox_var.get():
+            messagebox.showerror("Error", "Please select at least one weather API source before continuing")
+            return
+        
+        if not validateNumRequests(num_requests):
+            messagebox.showerror("Error", "Please enter less than 1000 daily requests")
+            return
+        
+        # Create the folder if it doesn't exist
+        folder_path = "C:\\BACnetWeatherFetchData"
+        if not os.path.exists(folder_path):
+            os.makedirs(folder_path)
 
-        # Create a thread for periodic weather fetching
-        weather_thread = threading.Thread(target=fetchWeatherPeriodically, args=(lat, lon, api_token))
-        weather_thread.start()
+        writeParamtersToXML(lat, lon, inputAlt, api_token, device_Id, port_Id, num_requests)
 
-        # Start BACnet devices and update their values
-        BACnetThread = threading.Thread(target=updateBACnetValues, args= (device_Id, port_Id))
-        BACnetThread.start()
+    
 
-        updateTextBoxesThread = threading.Thread(target=runTextboxUpdates)
-        updateTextBoxesThread.start()
     except ValueError:
         messagebox.showerror("Error", "Invalid input! Please enter valid numeric values for latitude, longitude, and altitude.")
         # Reset lat and lon to None
         lat = None
         lon = None
+
+def refreshButtonSubmit():
+    readThread = threading.Thread(target=runReadAndSet, daemon=True)
+    readThread.start()
+
+def validateNumRequests(num_requests):
+    return 1 <= num_requests <= 1000
 
 # function to validate longitude input
 def validate_lon(lon):
@@ -94,153 +108,240 @@ def update_time():
     clock_label.config(text=current_time)
     clock_label.after(1000,update_time)
 
+def stopProgram():
+    sys.exit()
 
-# functions relating to updating the weather values with checkbox
-def runTextboxUpdates():
-    # if openweather_api_checkbox_var.get():
+def runReadAndSet():
     while True:
-        weather_data = extractWeatherData()
-        # clear and enter the current temp data
-        current_temp = weather_data["current_temperature"]
-        currenttemp_entry.delete(0, tk.END)  # Clear existing value
-        currenttemp_entry.insert(0, current_temp)
-        maxtemp = weather_data["max_temperature"]
-        maxtemp_entry.delete(0, tk.END)
-        maxtemp_entry.insert(0, maxtemp)
-        averageTemp = weather_data["average_temperature"]
-        averagetemp_entry.delete(0, tk.END)
-        averagetemp_entry.insert(0, averageTemp)
-        temp3hr = weather_data["temp3hr"]
-        temp3hr_entry.delete(0, tk.END)
-        temp3hr_entry.insert(0, temp3hr)
-        temp6hr = weather_data["temp6hr"]
-        temp6hr_entry.delete(0, tk.END)
-        temp6hr_entry.insert(0, temp6hr)
-        temp9hr = weather_data["temp9hr"]
-        temp9hr_entry.delete(0, tk.END)
-        temp9hr_entry.insert(0, temp9hr)
-        temp12hr = weather_data["temp12hr"]
-        temp12hr_entry.delete(0, tk.END)
-        temp12hr_entry.insert(0, temp12hr)
-        temp15hr = weather_data["temp15hr"]
-        temp15hr_entry.delete(0, tk.END)
-        temp15hr_entry.insert(0, temp15hr)
-        temp18hr = weather_data["temp18hr"]
-        temp18hr_entry.delete(0, tk.END)
-        temp18hr_entry.insert(0, temp18hr)
-        temp21hr = weather_data["temp21hr"]
-        temp21hr_entry.delete(0, tk.END)
-        temp21hr_entry.insert(0, temp21hr)
-        temp24hr = weather_data["temp24hr"]
-        temp24hr_entry.delete(0, tk.END)
-        temp24hr_entry.insert(0, temp24hr)
-        # clear and insert current humidity data
-        currenthum = weather_data["humidity"]
-        currenthumidity_entry.delete(0, tk.END)  # Clear existing value
-        currenthumidity_entry.insert(0, currenthum)
-        maxhum = weather_data["max_humidity"]
-        maxhumidity_entry.delete(0, tk.END)
-        maxhumidity_entry.insert(0, maxhum)
-        averagehum = weather_data["average_humidity"]
-        averagehumidity_entry.delete(0, tk.END)
-        averagehumidity_entry.insert(0, averagehum)
-        humid3hr = weather_data["hum3hr"]
-        humid3hr_entry.delete(0, tk.END)
-        humid3hr_entry.insert(0, humid3hr)
-        humid6hr = weather_data["hum6hr"]
-        humid6hr_entry.delete(0, tk.END)
-        humid6hr_entry.insert(0, humid6hr)
-        humid9hr = weather_data["hum9hr"]
-        humid9hr_entry.delete(0, tk.END)
-        humid9hr_entry.insert(0, humid9hr)
-        humid12hr = weather_data["hum12hr"]
-        humid12hr_entry.delete(0, tk.END)
-        humid12hr_entry.insert(0, humid12hr)
-        humid15hr = weather_data["hum15hr"]
-        humid15hr_entry.delete(0, tk.END)
-        humid15hr_entry.insert(0, humid15hr)
-        humid18hr = weather_data["hum18hr"]
-        humid18hr_entry.delete(0, tk.END)
-        humid18hr_entry.insert(0, humid18hr)
-        humid21hr = weather_data["hum21hr"]
-        humid21hr_entry.delete(0, tk.END)
-        humid21hr_entry.insert(0, humid21hr)
-        humid24hr = weather_data["hum24hr"]
-        humid24hr_entry.delete(0, tk.END)
-        humid24hr_entry.insert(0, humid24hr)
+        readWeatherXML()
+        setTextBoxes()
+        time.sleep(60)
 
-        # clear and insert the values for dew point
-        currentdewpt = weather_data["current_dew_point"]
-        currentdewpt_entry.delete(0, tk.END)  # Clear existing value
-        currentdewpt_entry.insert(0, currentdewpt)
-        maxdewpt = weather_data["max_dewpt"]
-        maxdewpt_entry.delete(0, tk.END)
-        maxdewpt_entry.insert(0, maxdewpt)
-        averagedewpt = weather_data["avg_dewpt"]
-        averagedewpt_entry.delete(0, tk.END)
-        averagedewpt_entry.insert(0, averagedewpt)
-        dewpt3hr = weather_data["dew_point3hr"]
-        dewpt3hr_entry.delete(0, tk.END)
-        dewpt3hr_entry.insert(0, dewpt3hr)
-        dewpt6hr = weather_data["dew_point6hr"]
-        dewpt6hr_entry.delete(0, tk.END)
-        dewpt6hr_entry.insert(0, dewpt6hr)
-        dewpt9hr = weather_data["dew_point9hr"]
-        dewpt9hr_entry.delete(0, tk.END)
-        dewpt9hr_entry.insert(0, dewpt9hr)
-        dewpt12hr = weather_data["dew_point12hr"]
-        dewpt12hr_entry.delete(0, tk.END)
-        dewpt12hr_entry.insert(0, dewpt12hr)
-        dewpt15hr = weather_data["dew_point15hr"]
-        dewpt15hr_entry.delete(0, tk.END)
-        dewpt15hr_entry.insert(0, dewpt15hr)
-        dewpt18hr = weather_data["dew_point18hr"]
-        dewpt18hr_entry.delete(0, tk.END)
-        dewpt18hr_entry.insert(0, dewpt18hr)
-        dewpt21hr = weather_data["dew_point21hr"]
-        dewpt21hr_entry.delete(0, tk.END)
-        dewpt21hr_entry.insert(0, dewpt21hr)
-        dewpt24hr = weather_data["dew_point24hr"]
-        dewpt24hr_entry.delete(0, tk.END)
-        dewpt24hr_entry.insert(0, dewpt24hr)
+def writeParamtersToXML(lat, lon, inputAlt, api_token, device_Id, port_Id, num_requests):
+    # Create an XML structure
+    root = ET.Element("settings")
 
-        currententhalpy = weather_data["current_enthalpy"]
-        currententhalpy_entry.delete(0, tk.END)  # Clear existing value
-        currententhalpy_entry.insert(0, currententhalpy)
-        maxenthalpy = weather_data["max_enthalpy"]
-        maxenthalpy_entry.delete(0, tk.END)
-        maxenthalpy_entry.insert(0, maxenthalpy)
-        averageenthalpy = weather_data["avg_enthalpy"]
-        averageenthalpy_entry.delete(0, tk.END)
-        averageenthalpy_entry.insert(0, averageenthalpy)
-        enthalpy3hr = weather_data["enthalpy3hr"]
-        enthalpy3hr_entry.delete(0, tk.END)
-        enthalpy3hr_entry.insert(0, enthalpy3hr)
-        enthalpy6hr = weather_data["enthalpy6hr"]
-        enthalpy6hr_entry.delete(0, tk.END)
-        enthalpy6hr_entry.insert(0, enthalpy6hr)
-        enthalpy9hr = weather_data["enthalpy9hr"]
-        enthalpy9hr_entry.delete(0, tk.END)
-        enthalpy9hr_entry.insert(0, enthalpy9hr)
-        enthalpy12hr = weather_data["enthalpy12hr"]
-        enthalpy12hr_entry.delete(0, tk.END)
-        enthalpy12hr_entry.insert(0, enthalpy12hr)
-        enthalpy15hr = weather_data["enthalpy15hr"]
-        enthalpy15hr_entry.delete(0, tk.END)
-        enthalpy15hr_entry.insert(0, enthalpy15hr)
-        enthalpy18hr = weather_data["enthalpy18hr"]
-        enthalpy18hr_entry.delete(0, tk.END)
-        enthalpy18hr_entry.insert(0, enthalpy18hr)
-        enthalpy21hr = weather_data["enthalpy21hr"]
-        enthalpy21hr_entry.delete(0, tk.END)
-        enthalpy21hr_entry.insert(0, enthalpy21hr)
-        enthalpy24hr = weather_data["enthalpy24hr"]
-        enthalpy24hr_entry.delete(0, tk.END)
-        enthalpy24hr_entry.insert(0, enthalpy24hr)
+    # Add child elements for each parameter
+    lat_elem = ET.SubElement(root, "latitude")
+    lat_elem.text = str(lat)
 
-        time.sleep(31*60)
+    lon_elem = ET.SubElement(root, "longitude")
+    lon_elem.text = str(lon)
+
+    inputAlt_elem = ET.SubElement(root, "altitude")
+    inputAlt_elem.text = str(inputAlt)
+
+    api_token_elem = ET.SubElement(root, "api_token")
+    api_token_elem.text = api_token
+
+    device_Id_elem = ET.SubElement(root, "device_Id")
+    device_Id_elem.text = str(device_Id)
+
+    port_Id_elem = ET.SubElement(root, "port_Id")
+    port_Id_elem.text = port_Id
+
+    num_requests_elem = ET.SubElement(root, "num_requests")
+    num_requests_elem.text = str(num_requests)
+
+    # Save the XML to a file
+    tree_str = ET.tostring(root, encoding="utf-8")
+    pretty_xml = minidom.parseString(tree_str).toprettyxml(indent="  ")
+
+    with open("C:\\BACnetWeatherFetchData\settings.xml", "w") as xml_file:
+        xml_file.write(pretty_xml)
+
+def loadSettingsXML():
+    settingsXML = 'C:\\BACnetWeatherFetchData\\settings.xml'
+    
+    # Check if the file exists before parsing
+    if os.path.exists(settingsXML):
+        tree = ET.parse(settingsXML)
+        root = tree.getroot()
+        
+        latitude = float(root.find('latitude').text)
+        latitude_entry.delete(0, tk.END)
+        latitude_entry.insert(0, latitude)
+        longitude = float(root.find('longitude').text)
+        longitude_entry.delete(0, tk.END)
+        longitude_entry.insert(0, longitude)
+        altitude = float(root.find('altitude').text)
+        altitude_entry.delete(0, tk.END)
+        altitude_entry.insert(0, altitude)
+        device_Id = int(root.find('device_Id').text)
+        device_entry.delete(0, tk.END)
+        device_entry.insert(0, device_Id)
+        port_Id = int(root.find('port_Id').text)
+        port_entry.delete(0, tk.END)
+        port_entry.insert(0, port_Id)
+        num_requests = int(root.find('num_requests').text)
+        requests_entry.delete(0, tk.END)
+        requests_entry.insert(0, num_requests)
+
+    else:
+        # If the file doesn't exist, you can set the default state of your entries here
+        latitude_entry.delete(0, tk.END)         # No need to insert anything since we want it to be empty
+        longitude_entry.delete(0, tk.END)
+        altitude_entry.delete(0, tk.END)
+        device_entry.delete(0, tk.END)
+        port_entry.delete(0, tk.END)
+        requests_entry.delete(0, tk.END)
 
 
+def readWeatherXML():
+    global current_temperature, max_temperature, average_temperature, temp_3, temp_6, temp_9, temp_12, temp_15, temp_18, temp_18, temp_21, temp_24
+    global current_humidity, max_humidity, average_humidity, humid_3, humid_6, humid_9, humid_12, humid_15, humid_18, humid_21, humid_24
+    global current_enthalpy, max_enthalpy, average_enthalpy, enth_3, enth_6, enth_9, enth_12, enth_15, enth_18, enth_21, enth_24
+    global current_dewpt, max_dewpt, average_dewpt, dew_3, dew_6, dew_9, dew_12, dew_15, dew_18, dew_21, dew_24
+
+    # xmlfile = './weather_data.xml'
+    xmlfile = 'C:\\BACnetWeatherFetchData\weather_data.xml'
+    tree = ET.parse(xmlfile)
+    # extract weather values from the xml
+    root = tree.getroot()
+    # extract temperature data 
+    current_temperature = float(root.find('current_temperature').text)
+    max_temperature = float(root.find('max_temperature').text)
+    average_temperature = float(root.find('average_temperature').text)
+    temp_3 = float(root.find('temp3hr').text)
+    temp_6 = float(root.find('temp6hr').text)
+    temp_9 = float(root.find('temp9hr').text)
+    temp_12 = float(root.find('temp12hr').text)
+    temp_15 = float(root.find('temp15hr').text)
+    temp_18 = float(root.find('temp18hr').text)
+    temp_21 = float(root.find('temp21hr').text)
+    temp_24 = float(root.find('temp24hr').text)
+    # extract humidity data 
+    current_humidity = float(root.find('humidity').text)
+    max_humidity = float(root.find('max_humidity').text)
+    average_humidity = float(root.find('average_humidity').text)
+    humid_3 = float(root.find('hum3hr').text)
+    humid_6 = float(root.find('hum6hr').text)
+    humid_9 = float(root.find('hum9hr').text)
+    humid_12 = float(root.find('hum12hr').text)
+    humid_15 = float(root.find('hum15hr').text)
+    humid_18 = float(root.find('hum18hr').text)
+    humid_21 = float(root.find('hum21hr').text)
+    humid_24 = float(root.find('hum24hr').text)
+    # extract dew point data
+    current_dewpt = float(root.find('current_dew_point').text)
+    max_dewpt = float(root.find('max_dewpt').text)
+    average_dewpt = float(root.find('avg_dewpt').text)
+    dew_3 = float(root.find('dew_point3hr').text)
+    dew_6 = float(root.find('dew_point6hr').text)
+    dew_9 = float(root.find('dew_point9hr').text)
+    dew_12 = float(root.find('dew_point12hr').text)
+    dew_15 = float(root.find('dew_point15hr').text)
+    dew_18 = float(root.find('dew_point18hr').text)
+    dew_21 = float(root.find('dew_point21hr').text)
+    dew_24 = float(root.find('dew_point24hr').text)
+    #extract enthalpy data
+    current_enthalpy = float(root.find('current_enthalpy').text)
+    max_enthalpy = float(root.find('max_enthalpy').text)
+    average_enthalpy = float(root.find('avg_enthalpy').text)
+    enth_3 = float(root.find('enthalpy3hr').text)
+    enth_6 = float(root.find('enthalpy6hr').text)
+    enth_9 = float(root.find('enthalpy9hr').text)
+    enth_12 = float(root.find('enthalpy12hr').text)
+    enth_15 = float(root.find('enthalpy15hr').text)
+    enth_18 = float(root.find('enthalpy18hr').text)
+    enth_21 = float(root.find('enthalpy21hr').text)
+    enth_24 = float(root.find('enthalpy24hr').text)
+    
+    # Function that sets the xml data to the corresponding text boxes
+def setTextBoxes():
+    # Temperature data box updates
+    currenttemp_entry.delete(0, tk.END)  # Clear existing value
+    currenttemp_entry.insert(0, current_temperature)
+    maxtemp_entry.delete(0, tk.END)
+    maxtemp_entry.insert(0, max_temperature)
+    averagetemp_entry.delete(0, tk.END)
+    averagetemp_entry.insert(0, average_temperature)
+    temp3hr_entry.delete(0,tk.END)
+    temp3hr_entry.insert(0, temp_3)
+    temp6hr_entry.delete(0,tk.END)
+    temp6hr_entry.insert(0, temp_6)
+    temp9hr_entry.delete(0,tk.END)
+    temp9hr_entry.insert(0, temp_9)
+    temp12hr_entry.delete(0,tk.END)
+    temp12hr_entry.insert(0, temp_12)
+    temp15hr_entry.delete(0,tk.END)
+    temp15hr_entry.insert(0, temp_15)
+    temp18hr_entry.delete(0,tk.END)
+    temp18hr_entry.insert(0, temp_18)
+    temp21hr_entry.delete(0,tk.END)
+    temp21hr_entry.insert(0, temp_21)
+    temp24hr_entry.delete(0,tk.END)
+    temp24hr_entry.insert(0, temp_24)
+    #  Enthalpy data box updates
+    currenthumidity_entry.delete(0, tk.END)
+    currenthumidity_entry.insert(0, current_humidity)
+    maxhumidity_entry.delete(0, tk.END)
+    maxhumidity_entry.insert(0, max_humidity)
+    averagehumidity_entry.delete(0, tk.END)
+    averagehumidity_entry.insert(0, average_humidity)
+    humid3hr_entry.delete(0, tk.END)
+    humid3hr_entry.insert(0, humid_3)
+    humid6hr_entry.delete(0, tk.END)
+    humid6hr_entry.insert(0, humid_6)
+    humid9hr_entry.delete(0, tk.END)
+    humid9hr_entry.insert(0, humid_9)
+    humid12hr_entry.delete(0, tk.END)
+    humid12hr_entry.insert(0, humid_12)
+    humid15hr_entry.delete(0, tk.END)
+    humid15hr_entry.insert(0, humid_15)
+    humid18hr_entry.delete(0, tk.END)
+    humid18hr_entry.insert(0, humid_18)
+    humid21hr_entry.delete(0, tk.END)
+    humid21hr_entry.insert(0, humid_21)
+    humid24hr_entry.delete(0, tk.END)
+    humid24hr_entry.insert(0, humid_24)
+    # Dew Point data box updates
+    currentdewpt_entry.delete(0, tk.END)
+    currentdewpt_entry.insert(0, current_dewpt)
+    maxdewpt_entry.delete(0, tk.END)
+    maxdewpt_entry.insert(0, max_dewpt)
+    averagedewpt_entry.delete(0, tk.END)
+    averagedewpt_entry.insert(0, average_dewpt)
+    dewpt3hr_entry.delete(0, tk.END)
+    dewpt3hr_entry.insert(0, dew_3)
+    dewpt6hr_entry.delete(0, tk.END)
+    dewpt6hr_entry.insert(0, dew_6)
+    dewpt9hr_entry.delete(0, tk.END)
+    dewpt9hr_entry.insert(0, dew_9)
+    dewpt12hr_entry.delete(0, tk.END)
+    dewpt12hr_entry.insert(0, dew_12)
+    dewpt15hr_entry.delete(0, tk.END)
+    dewpt15hr_entry.insert(0, dew_15)
+    dewpt18hr_entry.delete(0, tk.END)
+    dewpt18hr_entry.insert(0, dew_18)
+    dewpt21hr_entry.delete(0, tk.END)
+    dewpt21hr_entry.insert(0, dew_21)
+    dewpt24hr_entry.delete(0, tk.END)
+    dewpt24hr_entry.insert(0, dew_24)
+
+    # Enthalpy data box updates
+    currententhalpy_entry.delete(0, tk.END)
+    currententhalpy_entry.insert(0, current_enthalpy)
+    maxenthalpy_entry.delete(0, tk.END)
+    maxenthalpy_entry.insert(0, max_enthalpy)
+    averageenthalpy_entry.delete(0, tk.END)
+    averageenthalpy_entry.insert(0, average_enthalpy)
+    enthalpy3hr_entry.delete(0, tk.END)
+    enthalpy3hr_entry.insert(0, enth_3)
+    enthalpy6hr_entry.delete(0, tk.END)
+    enthalpy6hr_entry.insert(0, enth_6)
+    enthalpy9hr_entry.delete(0, tk.END)
+    enthalpy9hr_entry.insert(0, enth_9)
+    enthalpy12hr_entry.delete(0, tk.END)
+    enthalpy12hr_entry.insert(0, enth_12)
+    enthalpy15hr_entry.delete(0, tk.END)
+    enthalpy15hr_entry.insert(0, enth_15)
+    enthalpy18hr_entry.delete(0, tk.END)
+    enthalpy18hr_entry.insert(0, enth_18)
+    enthalpy21hr_entry.delete(0, tk.END)
+    enthalpy21hr_entry.insert(0, enth_21)
+    enthalpy24hr_entry.delete(0, tk.END)
+    enthalpy24hr_entry.insert(0, enth_24)
 
 ######################################### GUI START #########################################
 
@@ -265,6 +366,7 @@ class Page1(Page):
         global device_entry
         global openweather_api_checkbox
         global openweather_api_checkbox_var
+        global requests_entry
         # Row 1 Widgets
         latitude_label = tk.Label(self, text="Latitude (-90 <-> +90):")
         latitude_entry = tk.Entry(self)
@@ -274,11 +376,11 @@ class Page1(Page):
         latitude_entry.grid(row=1, column=1, sticky="w", pady=(10,0))
         device_label.grid(row=1, column=3, sticky="w", pady=(10,0))
         device_entry.grid(row=1, column=4, sticky="w", pady=(10,0))
-
+         
         # Row 2 widgets
         longitude_label = tk.Label(self, text="Longitude (-180 <-> +180):")
         longitude_entry = tk.Entry(self)
-        port_label = tk.Label(self, text="Port ID:")
+        port_label = tk.Label(self, text="BACnet Port ID:")
         port_entry = tk.Entry(self)
         longitude_label.grid(row=2, column=0, sticky="w")
         longitude_entry.grid(row=2, column=1)
@@ -286,10 +388,14 @@ class Page1(Page):
         port_entry.grid(row=2, column=4, sticky="w")
         
         # Row 3 widgets
-        altitude_label = tk.Label(self, text="Altitude (Meters):")
+        altitude_label = tk.Label(self, text="Altitude (Metres):")
         altitude_entry = tk.Entry(self)
         altitude_label.grid(row=3, column=0, sticky="w")
         altitude_entry.grid(row=3, column=1, sticky="w")
+        requests_label = tk.Label(self, text="Num. Requests 24H (1-1000):")
+        requests_entry = tk.Entry(self)
+        requests_label.grid(row=3, column=3, sticky="w")
+        requests_entry.grid(row=3, column=4, sticky="w")
 
         # Row 4 label
         api_heading_label = tk.Label(self, text= "WEATHER API SOURCES", font=("segoe", 12, "bold"))
@@ -303,7 +409,7 @@ class Page1(Page):
 
         # create check box
         openweather_api_checkbox_var = tk.BooleanVar()
-        openweather_api_checkbox = tk.Checkbutton(self, variable=openweather_api_checkbox_var)  #command=runTextboxUpdates
+        openweather_api_checkbox = tk.Checkbutton(self, variable=openweather_api_checkbox_var)
         openweather_api_label.grid(row=5, column=0, sticky="w", pady=(10,0))
         openweather_api_checkbox.grid(row=5, column=1, sticky="w", pady=(10,0))
 
@@ -332,8 +438,8 @@ class Page1(Page):
         # api3_entry.grid(row=7, column=3)
 
         # Row 8 widgets (Start and Stop buttons)
-        start_button = tk.Button(self, text="START", width=5, height=2, bg="green", command=(submit_form))
-        stop_button = tk.Button(self, text="STOP", width=5, height=2, bg="red")
+        start_button = tk.Button(self, text="Confirm\nConfiguration", width=15, height=3, bg="green", command=(submit_form))
+        stop_button = tk.Button(self, text="STOP", width=7, height=3, bg="red", command=stopProgram)
         start_button.grid(row=8, column=1, pady=(60,0))
         stop_button.grid(row=8, column=3, pady=(60,0))
 
@@ -488,6 +594,8 @@ class Page2(Page):
         enthalpy24hr_entry = tk.Entry(self, width=12)
         enthalpy24hr_entry.grid(row=11, column=7, pady=(10,0))
 
+        fetchOW_button = tk.Button(self, text="Update Data", width=10, height=2, bg="lightblue", command=(refreshButtonSubmit))
+        fetchOW_button.grid(row=12, column=7, sticky="w", pady=(10,0))
 
 class Page3(Page):
     def __init__(self, *args, **kwargs):
@@ -663,3 +771,16 @@ class MainView(tk.Frame):
 
         # Start updating the time
         update_time()  
+
+    # Opens GUI window
+root = tk.Tk()
+main_view = MainView(root)  # Create an instance of your MainView
+main_view.pack(side="top", fill="both", expand=True)
+root.geometry("700x475")
+root.title("Weather API Fetching Virtual BACnet Device (V2.0)")
+root.resizable(False, False)
+
+loadSettingsXML()
+
+if __name__ == "__main__":
+    root.mainloop()
