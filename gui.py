@@ -106,7 +106,7 @@ def validDeviceId(device_Id):
 
 # creates clock with live time widget
 def update_time():
-    current_time = time.strftime('Current Time: %H:%M:%S')
+    current_time = time.strftime('%d-%m-%Y\n%H:%M:%S')
     clock_label.config(text=current_time)
     clock_label.after(1000,update_time)
 
@@ -646,6 +646,9 @@ class Page3(Page):
         self.ax.set_ylim(0, 100)
         self.ax.set_yticks(range(0, 101, 10))
 
+        # Add a title to the plot
+        self.ax.set_title("Open Weather Map API 24 Hour Trend")
+
         # Redraw the canvas
         self.canvas.draw()
 
@@ -795,7 +798,7 @@ class MainView(tk.Frame):
         p1.show()
         # Create the clock label
         global clock_label
-        clock_label = tk.Label(self, font=("segoe", 10))
+        clock_label = tk.Label(self, font=("segoe", 10, 'bold'))
         clock_label.pack()
 
         # Start updating the time
