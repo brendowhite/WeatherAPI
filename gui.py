@@ -7,6 +7,8 @@ import sys
 import xml.etree.ElementTree as ET
 import xml.dom.minidom as minidom
 import os
+import matplotlib.pyplot as plt
+from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 
 
 ########################### GUI FUNCTIONALITY ################################
@@ -597,65 +599,86 @@ class Page2(Page):
         fetchOW_button = tk.Button(self, text="Update Data", width=10, height=2, bg="lightblue", command=(refreshButtonSubmit))
         fetchOW_button.grid(row=12, column=7, sticky="w", pady=(10,0))
 
+
+# Define the Page3 class
 class Page3(Page):
     def __init__(self, *args, **kwargs):
         Page.__init__(self, *args, **kwargs)
-        templabel = tk.Label(self, text="Temperature", font=("segoe", 10, "bold"))
-        templabel.grid(row=0, column=0, columnspan=4, pady=(10, 0), sticky="w")
+        
+        # Create a figure and plot with a specific size
+        self.fig, self.ax = plt.subplots(figsize=(0, 1))  # Adjust the size as needed
+        self.times = ["Current", "+3hr", "+6hr", "+9hr", "+12hr", "+15hr", "+18hr", "+21hr", "+24hr"]
+        self.old_label = None  # To keep track of the old label
 
-        # Create labels for the rows
-        row_labels = ["Current:", "Max:", "Average:"] + [f"+{i*3} hours:" for i in range(1, 9)]
+        # Embed the plot in Tkinter
+        self.canvas = FigureCanvasTkAgg(self.fig, master=self)
+        self.canvas.draw()
+        self.canvas.get_tk_widget().pack(side=tk.TOP, fill=tk.BOTH, expand=1)
 
-        for i, row_label in enumerate(row_labels):
-            row_label_widget = tk.Label(self, text=row_label)
-            row_label_widget.grid(row=i + 1, column=0, sticky="w", pady=(10, 0))
 
-            # Create an Entry widget for each temperature value
-            entry = tk.Entry(self, width=10)
-            entry.grid(row=i + 1, column=1, padx=10, pady=(10, 0), sticky="w")
+        # Schedule the plot to update every minute (60000 milliseconds)
+        self.update_plot_every_minute()
 
-        # Create labels for humidity
-        humidity_label = tk.Label(self, text="Humidity", font=("segoe", 10, "bold"))
-        humidity_label.grid(row=0, column=2, pady=(10, 0), padx=10)
+        # Connect the click event to the callback function
+        self.canvas.mpl_connect("button_press_event", self.on_click)
 
-        # Create labels for the rows (humidity)
-        humrow_labels = ["Current:", "Max:", "Average:"] + [f"+{i*3} hours:" for i in range(1, 9)]
+    def update_plot(self):
+        # Clear the previous plot
+        self.ax.clear()
 
-        for i, row_label in enumerate(humrow_labels):
-            row_label_widget = tk.Label(self, text=row_label)
-            row_label_widget.grid(row=i + 1, column=2, sticky="w", pady=(10, 0), padx=10)
+        # Update the data
+        readWeatherXML()
+        self.temperatures = [current_temperature, temp_3, temp_6, temp_9, temp_12, temp_15, temp_18, temp_21, temp_24]
+        self.humidities = [current_humidity, humid_3, humid_6, humid_9, humid_12, humid_15, humid_18, humid_21, humid_24]
+        self.dew_points = [current_dewpt, dew_3, dew_6, dew_9, dew_12, dew_15, dew_18, dew_21, dew_24]
+        self.enthalpies = [current_enthalpy, enth_3, enth_6, enth_9, enth_12, enth_15, enth_18, enth_21, enth_24]
 
-            # Create an Entry widget for each humidity value
-            entry = tk.Entry(self, width=10)
-            entry.grid(row=i + 1, column=3, padx=10, pady=(10, 0))
+        # Plot the updated data
+        self.ax.plot(self.times, self.temperatures, label='Temperature (°C)', marker='o')
+        self.ax.plot(self.times, self.humidities, label='Humidity (%)', marker='o')
+        self.ax.plot(self.times, self.dew_points, label='Dew Point (°C)', marker='o')
+        self.ax.plot(self.times, self.enthalpies, label='Enthalpy (kJ/kg)', marker='o')
+        self.ax.set_xlabel('Time')
+        self.ax.set_ylabel('Value')
+        self.ax.legend()
 
-        # create labels for rows (dew point)
-        dewpt_label = tk.Label(self, text="Dew Point", font=("segoe", 10, "bold"))
-        dewpt_label.grid(row=0, column=4, pady=(10, 0), padx=10)
+        # Set y-axis limits and ticks to increments of 10 up to 100
+        self.ax.set_ylim(0, 100)
+        self.ax.set_yticks(range(0, 101, 10))
 
-        dewpt_labels = ["Current:", "Max:", "Average:"] + [f"+{i*3} hours:" for i in range(1, 9)]
+        # Redraw the canvas
+        self.canvas.draw()
 
-        for i, row_label in enumerate(dewpt_labels):
-            row_label_widget = tk.Label(self, text=row_label)
-            row_label_widget.grid(row=i + 1, column=4, sticky="w", pady=(10, 0), padx=10)
+    def update_plot_every_minute(self):
+        # Start a new thread to update the plot
+        threading.Thread(target=self.update_plot_thread).start()
+        self.after(60000, self.update_plot_every_minute)  # Schedule the update every 60000 milliseconds (1 minute)
 
-            # Create an Entry widget for each humidity value
-            entry = tk.Entry(self, width=10)
-            entry.grid(row=i + 1, column=5, padx=10, pady=(10, 0))
+    def update_plot_thread(self):
+        # Update the plot in a separate thread
+        self.update_plot()
 
-        # create labels for rows (dew point)
-        enth_label = tk.Label(self, text="Enthalpy", font=("segoe", 10, "bold"))
-        enth_label.grid(row=0, column=6, pady=(10, 0), padx=10)
+    def on_click(self, event):
+        # Convert time labels to numerical values for comparison
+        time_mapping = {label: idx for idx, label in enumerate(self.times)}
+        if event.inaxes is not None:
+            for line in self.ax.get_lines():
+                xdata, ydata = line.get_data()
+                label = line.get_label()
+                for x, y in zip(xdata, ydata):
+                    if abs(time_mapping[x] - event.xdata) < 0.5 and abs(y - event.ydata) < 1:
+                        # Display the value on the screen
+                        self.display_value(label, y)
 
-        enth_labels = ["Current:", "Max:", "Average:"] + [f"+{i*3} hours:" for i in range(1, 9)]
+    def display_value(self, y, label):
+        # Remove the old label if it exists
+        if self.old_label:
+            self.old_label.destroy()
 
-        for i, row_label in enumerate(enth_labels):
-            row_label_widget = tk.Label(self, text=row_label)
-            row_label_widget.grid(row=i + 1, column=6, sticky="w", pady=(10, 0), padx=10)
-
-            # Create an Entry widget for each humidity value
-            entry = tk.Entry(self, width=10)
-            entry.grid(row=i + 1, column=7, padx=10, pady=(10, 0))
+        # Create a new label to display the value
+        self.old_label = tk.Label(self, text=f"{y}: {label}", font=("segoe", 12))
+        self.old_label.pack()
+ 
 
 
 class Page4(Page):
@@ -718,6 +741,10 @@ class Page4(Page):
             entry = tk.Entry(self, width=10)
             entry.grid(row=i + 1, column=7, padx=10, pady=(10, 0))
 
+class Page5(Page):
+    def __init__(self, *args, **kwargs):
+        Page.__init__(self, *args, **kwargs)
+
 class MainView(tk.Frame):
     def __init__(self, *args, **kwargs):
         tk.Frame.__init__(self, *args, **kwargs)
@@ -725,7 +752,7 @@ class MainView(tk.Frame):
         p2 = Page2(self)
         p3 = Page3(self)
         p4 = Page4(self)
-
+        p5 = Page5(self)
 
         buttonframe = tk.Frame(self)
         container = tk.Frame(self)
@@ -736,13 +763,14 @@ class MainView(tk.Frame):
         p2.place(in_=container, x=0, y=0, relwidth=1, relheight=1)
         p3.place(in_=container, x=0, y=0, relwidth=1, relheight=1)
         p4.place(in_=container, x=0, y=0, relwidth=1, relheight=1)
+        p5.place(in_=container, x=0, y=0, relwidth=1, relheight=1)
 
         def show_page(page, button):
             # Show the selected page
             page.show()
 
             # Highlight the active button (change color)
-            for btn in [b1, b2, b3, b4]:
+            for btn in [b1, b2, b3, b4, b5]:
                 btn.configure(bg='lightblue')  # Reset other buttons
             button.configure(bg='orange')  # Set active button color
 
@@ -752,18 +780,19 @@ class MainView(tk.Frame):
 
 
         b1 = tk.Button(buttonframe, text="Configuration", command=lambda: show_page(p1, b1), bg='orange')
-        b2 = tk.Button(buttonframe, text="Source 1: Open Weather", command=lambda: show_page(p2, b2), bg='lightblue')
-        b3 = tk.Button(buttonframe, text="Source 2: Placeholder", command=lambda: show_page(p3, b3), bg='lightblue')
-        b4 = tk.Button(buttonframe, text="Source 3: Placeholder", command=lambda: show_page(p4, b4), bg='lightblue')
+        b2 = tk.Button(buttonframe, text="Source 1: Open Weather API", command=lambda: show_page(p2, b2), bg='lightblue')
+        b3 = tk.Button(buttonframe, text="Source 1: 24HR Trend", command=lambda: show_page(p3, b3), bg='lightblue')
+        b4 = tk.Button(buttonframe, text="Source 2: Placeholder", command=lambda: show_page(p4, b4), bg='lightblue')
+        b5 = tk.Button(buttonframe, text="Source 2: 24HR Trend", command=lambda: show_page(p5, b5), bg='lightblue')
 
 
         b1.pack(side="left")
         b2.pack(side="left")
         b3.pack(side="left")
         b4.pack(side="left")
+        b5.pack(side="left")
 
         p1.show()
-
         # Create the clock label
         global clock_label
         clock_label = tk.Label(self, font=("segoe", 10))
@@ -776,11 +805,18 @@ class MainView(tk.Frame):
 root = tk.Tk()
 main_view = MainView(root)  # Create an instance of your MainView
 main_view.pack(side="top", fill="both", expand=True)
-root.geometry("700x475")
-root.title("Weather API Fetching Virtual BACnet Device (V2.0)")
+root.geometry("700x500")
+root.title("Weather API Fetching Virtual BACnet Device (V1.0)")
 root.resizable(False, False)
 
 loadSettingsXML()
 
 if __name__ == "__main__":
+
+    def update():
+        root.update_idletasks()
+        root.update()
+        root.after(10, update)  # Update every 10 milliseconds
+    
+    update()
     root.mainloop()
