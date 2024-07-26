@@ -606,7 +606,8 @@ class Page3(Page):
         Page.__init__(self, *args, **kwargs)
         
         # Create a figure and plot with a specific size
-        self.fig, self.ax = plt.subplots(figsize=(0, 1))  # Adjust the size as needed
+        self.fig = plt.Figure(figsize=(0, 1))  # Adjust the size as needed
+        self.ax = self.fig.add_subplot(111)
         self.times = ["Current", "+3hr", "+6hr", "+9hr", "+12hr", "+15hr", "+18hr", "+21hr", "+24hr"]
         self.old_label = None  # To keep track of the old label
 
