@@ -11,6 +11,11 @@ current_time = datetime.datetime.now()
 import xml.etree.ElementTree as ET
 from xml.dom import minidom
 import threading
+from datetime import datetime
+import pytz
+from licenseVerification import verifyKey
+import sys
+
 
 
 # Global variables for weather data
@@ -21,9 +26,9 @@ current_enthalpy = 0
 hourly_temperatures = []
 hourly_humidity = []
 max_temperature = 0
-average_temperature = 0
+min_temperature = 0
 max_humidity = 0
-average_humidity = 0
+min_humidity = 0
 dew_point3hr = 0
 dew_point6hr = 0
 dew_point9hr = 0
@@ -72,15 +77,7 @@ def readXMLSettings():
     port_Id = int(root.find('port_Id').text)
     num_requests = int(root.find('num_requests').text)
 
-    print (lat)
-    print (lon)
-    print (altitude)
-    print (api_token)
-    print (device_Id)
-    print (port_Id)
-    print (num_requests)
-
-
+# Number of requests per day calculation
 def setDailyRequests(num_requests):
 
     # Number of requests per day calculation, this will just be thread calculation time
@@ -94,7 +91,7 @@ def setDailyRequests(num_requests):
 def dewPointCalc(temp, humidity, altitude):
     a = 17.27
     b = 237.7
-    deltaTemp = temp - (6.5 / 1000) * altitude # temperature typically decreases at a rate of 6.5 deg C for every 1000m (standard lapse rate)
+    deltaTemp = temp - ((6.5 / 1000) * altitude) # temperature typically decreases at a rate of 6.5 deg C for every 1000m (standard lapse rate)
     alpha = ((a * deltaTemp) / (b + deltaTemp)) + math.log(humidity / 100)
     dew_point = (b * alpha) / (a - alpha)
     return dew_point
@@ -102,17 +99,19 @@ def dewPointCalc(temp, humidity, altitude):
 # Function to calculate enthalpy
 def enthalpyCalc(temp, humidity, altitude):
     dew_point = dewPointCalc(temp, humidity, altitude)
-    deltaTemp = temp - (6.5 / 1000) * altitude # refer to comment above and (standard lapse rate)
+    deltaTemp = temp - ((6.5 / 1000) * altitude) # refer to comment above and (standard lapse rate)
     h = 1.006 * deltaTemp
     latent_heat = 2501
     specific_humidity = 0.622 * (humidity / 100) * 6.112 * math.exp((17.67 * dew_point) / (243.5 + dew_point)) / (1013.25 - (humidity / 100) * 6.112 * math.exp((17.67 * dew_point) / (243.5 + dew_point)))
     enthalpy = h + (latent_heat * specific_humidity)
+
     return enthalpy
 
+# fetch of open weather API
 def fetchWeatherData(lat, lon, api_token):
     # define global variables to be used in updating analog_values on BACnet device
-    global current_temperature, humidity, current_dew_point, current_enthalpy, hourly_temperatures, hourly_humidity, max_temperature, average_temperature, average_humidity, max_humidity
-    global dew_point3hr, dew_point6hr, dew_point9hr, dew_point12hr, dew_point15hr, dew_point18hr, dew_point21hr, dew_point24hr, averageEnthalpy, averageDewpt
+    global current_temperature, humidity, current_dew_point, current_enthalpy, hourly_temperatures, hourly_humidity, max_temperature, min_temperature, min_humidity, max_humidity
+    global dew_point3hr, dew_point6hr, dew_point9hr, dew_point12hr, dew_point15hr, dew_point18hr, dew_point21hr, dew_point24hr, minEnthalpy, minDewpt
     global enthalpy3hr, enthalpy6hr, enthalpy9hr, enthalpy12hr, enthalpy15hr, enthalpy18hr, enthalpy21hr, enthalpy24hr, maximumDewPt, maximumEnthalpy
  
     # Open Weather Map API with 3 arguments, latitude, longitude and weather api token. Metric by default
@@ -126,10 +125,10 @@ def fetchWeatherData(lat, lon, api_token):
         hourly_temperatures = [hour['main']['temp'] for hour in hourly_data]
         hourly_humidity = [hour['main']['humidity'] for hour in hourly_data]
         max_temperature = max(hourly_temperatures)
-        average_temperature = sum(hourly_temperatures) / len(hourly_temperatures)
+        min_temperature = min(hourly_temperatures)
         current_temperature = data['list'][0]['main']['temp']
         humidity = data['list'][0]['main']['humidity']
-        average_humidity = sum(hourly_humidity) / len(hourly_humidity)
+        min_humidity = min(hourly_humidity)
         max_humidity = max(hourly_humidity)
 
         # Data for dew point and enthalpy calculated via custom functions
@@ -155,14 +154,14 @@ def fetchWeatherData(lat, lon, api_token):
         hourlydewpoint = [current_dew_point, dew_point3hr,dew_point6hr, dew_point9hr, dew_point12hr, dew_point15hr, dew_point18hr, dew_point21hr, dew_point24hr]
         maximumDewPt = max(hourlydewpoint)
         hourlyEnthalpy = [current_enthalpy, enthalpy3hr, enthalpy6hr, enthalpy9hr, enthalpy12hr, enthalpy15hr, enthalpy18hr, enthalpy21hr, enthalpy24hr]
+        minEnthalpy = min(hourlyEnthalpy)
+        minDewpt = min(hourlydewpoint)
         maximumEnthalpy = max(hourlyEnthalpy)
-        averageDewpt = sum(hourlydewpoint) / len(hourlydewpoint)
-        averageEnthalpy = sum(hourlyEnthalpy) / len(hourlyEnthalpy)
 
     except KeyError:
         print("Error fetching initial weather data")
 
-
+# store the collected data into a dictionary and format/ write to xml format
 def writeXMLWeatherData():
         # Define the data
     data = {
@@ -185,8 +184,8 @@ def writeXMLWeatherData():
         "hum24hr": hourly_humidity[8],
         "max_temperature": max_temperature,
         "max_humidity": max_humidity,
-        "average_humidity": average_humidity,
-        "average_temperature": average_temperature,
+        "minimum_humidity": min_humidity,
+        "minimum_temperature": min_temperature,
         "humidity": humidity,
         "current_dew_point": current_dew_point,
         "dew_point3hr": dew_point3hr,
@@ -208,8 +207,8 @@ def writeXMLWeatherData():
         "enthalpy24hr": enthalpy24hr,
         "max_dewpt": maximumDewPt,
         "max_enthalpy": maximumEnthalpy,
-        "avg_dewpt": averageDewpt,
-        "avg_enthalpy": averageEnthalpy
+        "minimum_dewpt": minDewpt,
+        "minimum_enthalpy": minEnthalpy
     }
     # Create an XML structure
     root = ET.Element("weather_data")
@@ -227,11 +226,271 @@ def writeXMLWeatherData():
         xml_file.write(pretty_xml)
 
 
+## Open - Meteo API code
+# calculate the altitude effect on dew point
+def deltaDewPoint(initialDewPt, altitude):
+    dew_point_change_rate = 0.2 / 100  # °C per meter
+    # Calculate the dew point change
+    dew_point_change = dew_point_change_rate * altitude
+
+    # Calculate the adjusted dew point
+    adjusted_dew_point = initialDewPt - dew_point_change
+
+    return adjusted_dew_point
+
+
+# calculate the altitude effect on enthalpy
+def deltaEnthalpy(initialEnthalpy, altitude):
+    # Enthalpy change rate (approximation)
+    enthalpy_change_rate = 0.0065  # kJ/kg per meter
+    # Calculate the enthalpy change
+    enthalpy_change = enthalpy_change_rate * altitude
+
+    # Calculate the adjusted enthalpy
+    adjusted_enthalpy = initialEnthalpy - enthalpy_change
+
+    return adjusted_enthalpy
+
+
+def calculate_specific_humidity(temperature, relative_humidity):
+    # Calculate the saturation vapor pressure (in hPa)
+    es = 6.112 * 10**((7.5 * temperature) / (237.7 + temperature))
+    # Calculate the actual vapor pressure (in hPa)
+    e = es * (relative_humidity / 100)
+    # Calculate the specific humidity (in kg/kg)
+    specific_humidity = 0.622 * e / (1013.25 - e)
+    return specific_humidity
+
+def calculate_enthalpy(temperature, specific_humidity):
+    # Constants
+    cp = 1.006  # Specific heat capacity of dry air (kJ/kg·°C)
+    cpv = 1.86  # Specific heat capacity of water vapor (kJ/kg·°C)
+    Lv = 2501  # Latent heat of vaporization (kJ/kg)
+    
+    # Calculate enthalpy (kJ/kg)
+    enthalpy = cp * temperature + specific_humidity * (cpv * temperature + Lv)
+    return enthalpy
+
+
+
+def fetchOpenMeteoWeather(lat, lon):
+    # Define the URL for the Open-Meteo API
+    url = "https://api.open-meteo.com/v1/forecast"
+
+    # Define the parameters for the API request
+    params = {
+        "latitude": lat,
+        "longitude": lon,
+        "hourly": ["temperature_2m", "relative_humidity_2m", "dew_point_2m"],
+        "timezone": "Australia/Sydney",
+        "forecast_days": 2,
+        "models": "bom_access_global"
+    }
+
+    # Make the API request
+    responses = requests.get(url, params=params, verify=False)
+    data = responses.json()
+
+    # Extract data every 3 hours starting from the 10th or 11th value based on DST
+    hourly_data = data['hourly']
+    filtered_data = {
+        'time': [],
+        'temperature_2m': [],
+        'relative_humidity_2m': [],
+        'dew_point_2m': [],
+        'enthalpy': []
+    }   
+
+    # Define the Sydney timezone
+    sydney_tz = pytz.timezone('Australia/Sydney')
+
+    # Get the current hour in military time
+    now = datetime.now(sydney_tz)
+    current_hour = now.hour
+
+    # Start from the current hour and take every 3rd element up to +24 hours
+    for i in range(current_hour, current_hour + 25, 3):
+        index = i % 25  # Ensure the index wraps around if it exceeds 24
+        if index >= len(hourly_data['time']):
+            break
+        # Extract and assign each element to a corresponding variable
+        time = hourly_data['time'][index]
+        temperature_2m = hourly_data['temperature_2m'][index]
+        relative_humidity_2m = hourly_data['relative_humidity_2m'][index]
+        dew_point_2m = hourly_data['dew_point_2m'][index]
+        
+        # Calculate specific humidity
+        specific_humidity = calculate_specific_humidity(temperature_2m, relative_humidity_2m)
+        
+        # Calculate enthalpy
+        enthalpy = calculate_enthalpy(temperature_2m, specific_humidity)
+        
+        # Append to filtered_data
+        filtered_data['time'].append(time)
+        filtered_data['temperature_2m'].append(temperature_2m)
+        filtered_data['relative_humidity_2m'].append(relative_humidity_2m)
+        filtered_data['dew_point_2m'].append(dew_point_2m)
+        filtered_data['enthalpy'].append(enthalpy)
+
+    # Assign the data to individual variables
+    BOMtemp0h = filtered_data['temperature_2m'][0]
+    BOMtemp3h = filtered_data['temperature_2m'][1]
+    BOMtemp6h = filtered_data['temperature_2m'][2]
+    BOMtemp9h = filtered_data['temperature_2m'][3]
+    BOMtemp12h = filtered_data['temperature_2m'][4]
+    BOMtemp15h = filtered_data['temperature_2m'][5]
+    BOMtemp18h = filtered_data['temperature_2m'][6]
+    BOMtemp21h = filtered_data['temperature_2m'][7]
+    BOMtemp24h = filtered_data['temperature_2m'][8]
+
+    BOMhumidity0h = filtered_data['relative_humidity_2m'][0]
+    BOMhumidity3h = filtered_data['relative_humidity_2m'][1]
+    BOMhumidity6h = filtered_data['relative_humidity_2m'][2]
+    BOMhumidity9h = filtered_data['relative_humidity_2m'][3]
+    BOMhumidity12h = filtered_data['relative_humidity_2m'][4]
+    BOMhumidity15h = filtered_data['relative_humidity_2m'][5]
+    BOMhumidity18h = filtered_data['relative_humidity_2m'][6]
+    BOMhumidity21h = filtered_data['relative_humidity_2m'][7]
+    BOMhumidity24h = filtered_data['relative_humidity_2m'][8]
+
+    # Adjust the dew point values based on the altitude change
+    BOMdewpoint0h = deltaDewPoint(filtered_data['dew_point_2m'][0], altitude)
+    BOMdewpoint3h = deltaDewPoint(filtered_data['dew_point_2m'][1], altitude)
+    BOMdewpoint6h = deltaDewPoint(filtered_data['dew_point_2m'][2], altitude)
+    BOMdewpoint9h = deltaDewPoint(filtered_data['dew_point_2m'][3], altitude)
+    BOMdewpoint12h = deltaDewPoint(filtered_data['dew_point_2m'][4], altitude)
+    BOMdewpoint15h = deltaDewPoint(filtered_data['dew_point_2m'][5], altitude)
+    BOMdewpoint18h = deltaDewPoint(filtered_data['dew_point_2m'][6], altitude)
+    BOMdewpoint21h = deltaDewPoint(filtered_data['dew_point_2m'][7], altitude)
+    BOMdewpoint24h = deltaDewPoint(filtered_data['dew_point_2m'][8], altitude)
+
+    # Adjust the enthalpy values based on the altitude change
+    BOMenthalpy0h = deltaEnthalpy(filtered_data['enthalpy'][0], altitude)
+    BOMenthalpy3h = deltaEnthalpy(filtered_data['enthalpy'][1], altitude)
+    BOMenthalpy6h = deltaEnthalpy(filtered_data['enthalpy'][2], altitude)
+    BOMenthalpy9h = deltaEnthalpy(filtered_data['enthalpy'][3], altitude)
+    BOMenthalpy12h = deltaEnthalpy(filtered_data['enthalpy'][4], altitude)
+    BOMenthalpy15h = deltaEnthalpy(filtered_data['enthalpy'][5], altitude)
+    BOMenthalpy18h = deltaEnthalpy(filtered_data['enthalpy'][6], altitude)
+    BOMenthalpy21h = deltaEnthalpy(filtered_data['enthalpy'][7], altitude)
+    BOMenthalpy24h = deltaEnthalpy(filtered_data['enthalpy'][8], altitude)
+
+    # Find the maximum values
+    BOMmax_temp = max(filtered_data['temperature_2m'])
+    BOMmax_humidity = max(filtered_data['relative_humidity_2m'])
+    BOMmax_dewpoint = max([
+    BOMdewpoint0h, BOMdewpoint3h, BOMdewpoint6h, BOMdewpoint9h,
+    BOMdewpoint12h, BOMdewpoint15h, BOMdewpoint18h, BOMdewpoint21h, BOMdewpoint24h
+    ])
+    BOMmax_enthalpy = max([BOMenthalpy0h, BOMenthalpy3h, BOMenthalpy6h, BOMenthalpy9h, 
+    BOMenthalpy12h, BOMenthalpy15h, BOMenthalpy18h, BOMenthalpy21h, BOMenthalpy24h])
+
+    # Calculate the average of each metric
+    BOMminimum_temp = min(filtered_data['temperature_2m'])
+    BOMminimum_humidity = min(filtered_data['relative_humidity_2m'])
+    BOMminimum_dewpoint = min([
+        BOMdewpoint0h, BOMdewpoint3h, BOMdewpoint6h, BOMdewpoint9h,
+        BOMdewpoint12h, BOMdewpoint15h, BOMdewpoint18h, BOMdewpoint21h, BOMdewpoint24h
+    ])
+    BOMminimum_enthalpy = min([
+        BOMenthalpy0h, BOMenthalpy3h, BOMenthalpy6h, BOMenthalpy9h,
+        BOMenthalpy12h, BOMenthalpy15h, BOMenthalpy18h, BOMenthalpy21h, BOMenthalpy24h
+    ])
+
+    writeWeatherDataToXML(BOMtemp0h, BOMtemp3h, BOMtemp6h, BOMtemp9h, BOMtemp12h, BOMtemp15h, BOMtemp18h, BOMtemp21h, BOMtemp24h,
+    BOMhumidity0h, BOMhumidity3h, BOMhumidity6h, BOMhumidity9h, BOMhumidity12h, BOMhumidity15h, BOMhumidity18h, BOMhumidity21h, BOMhumidity24h,
+    BOMdewpoint0h, BOMdewpoint3h, BOMdewpoint6h, BOMdewpoint9h, BOMdewpoint12h, BOMdewpoint15h, BOMdewpoint18h, BOMdewpoint21h, BOMdewpoint24h,
+    BOMenthalpy0h, BOMenthalpy3h, BOMenthalpy6h, BOMenthalpy9h, BOMenthalpy12h, BOMenthalpy15h, BOMenthalpy18h, BOMenthalpy21h, BOMenthalpy24h,
+    BOMmax_temp, BOMmax_humidity, BOMmax_dewpoint, BOMmax_enthalpy,
+    BOMminimum_temp, BOMminimum_humidity, BOMminimum_dewpoint, BOMminimum_enthalpy)
+
+# take data from weather fetch and write it to an xml structure
+def writeWeatherDataToXML(BOMtemp0h, BOMtemp3h, BOMtemp6h, BOMtemp9h, BOMtemp12h, BOMtemp15h, BOMtemp18h, BOMtemp21h, BOMtemp24h,
+    BOMhumidity0h, BOMhumidity3h, BOMhumidity6h, BOMhumidity9h, BOMhumidity12h, BOMhumidity15h, BOMhumidity18h, BOMhumidity21h, BOMhumidity24h,
+    BOMdewpoint0h, BOMdewpoint3h, BOMdewpoint6h, BOMdewpoint9h, BOMdewpoint12h, BOMdewpoint15h, BOMdewpoint18h, BOMdewpoint21h, BOMdewpoint24h,
+    BOMenthalpy0h, BOMenthalpy3h, BOMenthalpy6h, BOMenthalpy9h, BOMenthalpy12h, BOMenthalpy15h, BOMenthalpy18h, BOMenthalpy21h, BOMenthalpy24h,
+    BOMmax_temp, BOMmax_humidity, BOMmax_dewpoint, BOMmax_enthalpy,
+    BOMminimum_temp, BOMminimum_humidity, BOMminimum_dewpoint, BOMminimum_enthalpy):
+
+    root = ET.Element("WeatherData")
+
+    # Create temperature elements
+    temperatures = ET.SubElement(root, "Temperatures")
+    ET.SubElement(temperatures, "BOMtemp0h").text = str(BOMtemp0h)
+    ET.SubElement(temperatures, "BOMtemp3h").text = str(BOMtemp3h)
+    ET.SubElement(temperatures, "BOMtemp6h").text = str(BOMtemp6h)
+    ET.SubElement(temperatures, "BOMtemp9h").text = str(BOMtemp9h)
+    ET.SubElement(temperatures, "BOMtemp12h").text = str(BOMtemp12h)
+    ET.SubElement(temperatures, "BOMtemp15h").text = str(BOMtemp15h)
+    ET.SubElement(temperatures, "BOMtemp18h").text = str(BOMtemp18h)
+    ET.SubElement(temperatures, "BOMtemp21h").text = str(BOMtemp21h)
+    ET.SubElement(temperatures, "BOMtemp24h").text = str(BOMtemp24h)
+    ET.SubElement(temperatures, "BOMmax_temp").text = str(BOMmax_temp)
+    ET.SubElement(temperatures, "BOMminimum_temp").text = str(BOMminimum_temp)
+
+    # Create humidity elements
+    humidities = ET.SubElement(root, "Humidities")
+    ET.SubElement(humidities, "BOMhumidity0h").text = str(BOMhumidity0h)
+    ET.SubElement(humidities, "BOMhumidity3h").text = str(BOMhumidity3h)
+    ET.SubElement(humidities, "BOMhumidity6h").text = str(BOMhumidity6h)
+    ET.SubElement(humidities, "BOMhumidity9h").text = str(BOMhumidity9h)
+    ET.SubElement(humidities, "BOMhumidity12h").text = str(BOMhumidity12h)
+    ET.SubElement(humidities, "BOMhumidity15h").text = str(BOMhumidity15h)
+    ET.SubElement(humidities, "BOMhumidity18h").text = str(BOMhumidity18h)
+    ET.SubElement(humidities, "BOMhumidity21h").text = str(BOMhumidity21h)
+    ET.SubElement(humidities, "BOMhumidity24h").text = str(BOMhumidity24h)
+    ET.SubElement(humidities, "BOMmax_humidity").text = str(BOMmax_humidity)
+    ET.SubElement(humidities, "BOMminimum_humidity").text = str(BOMminimum_humidity)
+
+    # Create dew point elements
+    dewpoints = ET.SubElement(root, "DewPoints")
+    ET.SubElement(dewpoints, "BOMdewpoint0h").text = str(BOMdewpoint0h)
+    ET.SubElement(dewpoints, "BOMdewpoint3h").text = str(BOMdewpoint3h)
+    ET.SubElement(dewpoints, "BOMdewpoint6h").text = str(BOMdewpoint6h)
+    ET.SubElement(dewpoints, "BOMdewpoint9h").text = str(BOMdewpoint9h)
+    ET.SubElement(dewpoints, "BOMdewpoint12h").text = str(BOMdewpoint12h)
+    ET.SubElement(dewpoints, "BOMdewpoint15h").text = str(BOMdewpoint15h)
+    ET.SubElement(dewpoints, "BOMdewpoint18h").text = str(BOMdewpoint18h)
+    ET.SubElement(dewpoints, "BOMdewpoint21h").text = str(BOMdewpoint21h)
+    ET.SubElement(dewpoints, "BOMdewpoint24h").text = str(BOMdewpoint24h)
+    ET.SubElement(dewpoints, "BOMmax_dewpoint").text = str(BOMmax_dewpoint)
+    ET.SubElement(dewpoints, "BOMminimum_dewpoint").text = str(BOMminimum_dewpoint)
+
+    # Create enthalpy elements
+    enthalpies = ET.SubElement(root, "Enthalpies")
+    ET.SubElement(enthalpies, "BOMenthalpy0h").text = str(BOMenthalpy0h)
+    ET.SubElement(enthalpies, "BOMenthalpy3h").text = str(BOMenthalpy3h)
+    ET.SubElement(enthalpies, "BOMenthalpy6h").text = str(BOMenthalpy6h)
+    ET.SubElement(enthalpies, "BOMenthalpy9h").text = str(BOMenthalpy9h)
+    ET.SubElement(enthalpies, "BOMenthalpy12h").text = str(BOMenthalpy12h)
+    ET.SubElement(enthalpies, "BOMenthalpy15h").text = str(BOMenthalpy15h)
+    ET.SubElement(enthalpies, "BOMenthalpy18h").text = str(BOMenthalpy18h)
+    ET.SubElement(enthalpies, "BOMenthalpy21h").text = str(BOMenthalpy21h)
+    ET.SubElement(enthalpies, "BOMenthalpy24h").text = str(BOMenthalpy24h)
+    ET.SubElement(enthalpies, "BOMmax_enthalpy").text = str(BOMmax_enthalpy)
+    ET.SubElement(enthalpies, "BOMminimum_enthalpy").text = str(BOMminimum_enthalpy)
+
+    # Write to XML file with pretty print
+    xml_str = minidom.parseString(ET.tostring(root)).toprettyxml(indent="   ")
+    with open("C:\\BACnetWeatherFetchData\OpenMeteo_weather_data.xml", "w") as f:
+        f.write(xml_str)
+
+
+def runOpenMeteo():
+    # Read the XML settings to get latitude and longitude
+    readXMLSettings()
+    # Fetch the weather data using the extracted latitude and longitude
+    fetchOpenMeteoWeather(lat, lon)
+
+
+
+# loop to constantly fetch and update weather information
 def fetchWeatherPeriodically():
     while True:
         readXMLSettings()
         sleep_time = setDailyRequests(num_requests)
         fetchWeatherData(lat, lon, api_token)
+        runOpenMeteo()
         writeXMLWeatherData()
         time.sleep(sleep_time)
 
@@ -243,6 +502,13 @@ weather_thread.start()
 
 # # Create the virtual BACnet device below, it will include a number of different analog_values for weather metrics
 def start_device(device_Id, port_Id):
+    # will run license verification before window initialisation
+    file_path = './nssm-2.24/appData.txt'
+    key_multiplier = 263
+
+    if not verifyKey(file_path, key_multiplier):
+        sys.exit()
+        
     virtualDevice = BAC0.lite(deviceId=device_Id, port=port_Id)
     time.sleep(1)
 
@@ -501,16 +767,16 @@ def start_device(device_Id, port_Id):
     )
     _new_objects = analog_value(
         instance=37,
-        name="Average Humidity 24H",
-        description="Average Humidity in the next 24HR",
-        presentValue=average_humidity,
+        name="Minimum Humidity 24H",
+        description="Minimum Humidity in the next 24HR",
+        presentValue=min_humidity,
         properties={"units":"percent"}
     )
     _new_objects = analog_value(
         instance=38,
-        name="Average Temperature 24H",
-        description="Average Temperature in the next 24HR",
-        presentValue=average_temperature,
+        name="Minimum Temperature 24H",
+        description="Minimum Temperature in the next 24HR",
+        presentValue=min_temperature,
         properties={"units":"degreesCelsius"}
     )
     _new_objects = analog_value(
@@ -529,9 +795,9 @@ def start_device(device_Id, port_Id):
     )
     _new_objects = analog_value(
         instance=41,
-        name="Average Enthalpy 24H",
-        description="Average Enthalpy in the next 24HR",
-        presentValue=averageEnthalpy,
+        name="Minimum Enthalpy 24H",
+        description="Minimum Enthalpy in the next 24HR",
+        presentValue=minEnthalpy,
         properties={"units":"kilojoulesPerKilogram"}
     )
     _new_objects = analog_value(
@@ -550,18 +816,17 @@ def start_device(device_Id, port_Id):
     )
     _new_objects = analog_value(
         instance=44,
-        name="Average Dew Point 24H",
-        description="Average Dew Point in the next 24HR",
-        presentValue=averageDewpt,
+        name="Minimum Dew Point 24H",
+        description="Min Dew Point in the next 24HR",
+        presentValue=minDewpt,
         properties={"units":"degreesCelsius"}
     )
 
-# up to here
     _new_objects.add_objects_to_application(virtualDevice)
     return virtualDevice
 
 try:
-
+    # reading the xml weather data and updating the internal variables of the BACnet device
     readXMLSettings()
     bacnet_device = start_device(device_Id, port_Id)
     # run an infinite loop that updates current weather values
@@ -610,10 +875,15 @@ try:
         bacnet_device["Predicted Dew Point +21hr"].presentValue=dew_point21hr
         bacnet_device["Predicted Dew Point +24hr"].presentValue=dew_point24hr
     # update the avg and max humidity and temp readings
-        bacnet_device["Average Humidity 24H"].presentValue=average_humidity
-        bacnet_device["Average Temperature 24H"].presentValue=average_temperature
+        bacnet_device["Minimum Humidity 24H"].presentValue=min_humidity
+        bacnet_device["Minimum Temperature 24H"].presentValue=min_temperature
+        bacnet_device["Minimum Enthalpy 24H"].presentValue=minEnthalpy
+        bacnet_device["Minimum Dew Point 24H"].presentValue=minDewpt
         bacnet_device["Maximum Temperature 24H"].presentValue=max_temperature
         bacnet_device["Maximum Humidity 24H"].presentValue=max_humidity
+        bacnet_device["Maximum Enthalpy 24H"].presentValue=maximumEnthalpy
+        bacnet_device["Maximum Dew Point 24H"].presentValue=maximumDewPt
+
 
         time.sleep(loop_sleep + 5) 
 except Exception as e:
