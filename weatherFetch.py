@@ -116,50 +116,57 @@ def fetchWeatherData(lat, lon, api_token):
  
     # Open Weather Map API with 3 arguments, latitude, longitude and weather api token. Metric by default
     url = f'http://api.openweathermap.org/data/2.5/forecast?lat={lat}&lon={lon}&units=metric&appid={api_token}'
-    response = requests.get(url)
-    data = response.json()
 
-    try:
-        # key data pulled from the API 
-        hourly_data = data['list'][0:9]
-        hourly_temperatures = [hour['main']['temp'] for hour in hourly_data]
-        hourly_humidity = [hour['main']['humidity'] for hour in hourly_data]
-        max_temperature = max(hourly_temperatures)
-        min_temperature = min(hourly_temperatures)
-        current_temperature = data['list'][0]['main']['temp']
-        humidity = data['list'][0]['main']['humidity']
-        min_humidity = min(hourly_humidity)
-        max_humidity = max(hourly_humidity)
+    while True:
+        try:
+            response = requests.get(url)
+            response.raise_for_status()  # Check for HTTP errors
+            data = response.json()
 
-        # Data for dew point and enthalpy calculated via custom functions
-        current_dew_point = dewPointCalc(current_temperature, humidity, altitude)
-        dew_point3hr = dewPointCalc(hourly_temperatures[1], hourly_humidity[1], altitude)
-        dew_point6hr = dewPointCalc(hourly_temperatures[2], hourly_humidity[2], altitude)
-        dew_point9hr = dewPointCalc(hourly_temperatures[3], hourly_humidity[3], altitude)
-        dew_point12hr = dewPointCalc(hourly_temperatures[4], hourly_humidity[4], altitude)
-        dew_point15hr = dewPointCalc(hourly_temperatures[5], hourly_humidity[5], altitude)
-        dew_point18hr = dewPointCalc(hourly_temperatures[6], hourly_humidity[6], altitude)
-        dew_point21hr = dewPointCalc(hourly_temperatures[7], hourly_humidity[7], altitude)
-        dew_point24hr = dewPointCalc(hourly_temperatures[8], hourly_humidity[8], altitude)
-        current_enthalpy = enthalpyCalc(current_temperature, humidity, altitude)
-        enthalpy3hr = enthalpyCalc(hourly_temperatures[1], hourly_humidity[1], altitude)
-        enthalpy6hr = enthalpyCalc(hourly_temperatures[2], hourly_humidity[2], altitude)
-        enthalpy9hr = enthalpyCalc(hourly_temperatures[3], hourly_humidity[3], altitude)
-        enthalpy12hr = enthalpyCalc(hourly_temperatures[4], hourly_humidity[4], altitude)
-        enthalpy15hr = enthalpyCalc(hourly_temperatures[5], hourly_humidity[5], altitude)
-        enthalpy18hr = enthalpyCalc(hourly_temperatures[6], hourly_humidity[6], altitude)
-        enthalpy21hr = enthalpyCalc(hourly_temperatures[7], hourly_humidity[7], altitude)
-        enthalpy24hr = enthalpyCalc(hourly_temperatures[8], hourly_humidity[8], altitude)
+            # key data pulled from the API 
+            hourly_data = data['list'][0:9]
+            hourly_temperatures = [hour['main']['temp'] for hour in hourly_data]
+            hourly_humidity = [hour['main']['humidity'] for hour in hourly_data]
+            max_temperature = max(hourly_temperatures)
+            min_temperature = min(hourly_temperatures)
+            current_temperature = data['list'][0]['main']['temp']
+            humidity = data['list'][0]['main']['humidity']
+            min_humidity = min(hourly_humidity)
+            max_humidity = max(hourly_humidity)
 
-        hourlydewpoint = [current_dew_point, dew_point3hr,dew_point6hr, dew_point9hr, dew_point12hr, dew_point15hr, dew_point18hr, dew_point21hr, dew_point24hr]
-        maximumDewPt = max(hourlydewpoint)
-        hourlyEnthalpy = [current_enthalpy, enthalpy3hr, enthalpy6hr, enthalpy9hr, enthalpy12hr, enthalpy15hr, enthalpy18hr, enthalpy21hr, enthalpy24hr]
-        minEnthalpy = min(hourlyEnthalpy)
-        minDewpt = min(hourlydewpoint)
-        maximumEnthalpy = max(hourlyEnthalpy)
+            # Data for dew point and enthalpy calculated via custom functions
+            current_dew_point = dewPointCalc(current_temperature, humidity, altitude)
+            dew_point3hr = dewPointCalc(hourly_temperatures[1], hourly_humidity[1], altitude)
+            dew_point6hr = dewPointCalc(hourly_temperatures[2], hourly_humidity[2], altitude)
+            dew_point9hr = dewPointCalc(hourly_temperatures[3], hourly_humidity[3], altitude)
+            dew_point12hr = dewPointCalc(hourly_temperatures[4], hourly_humidity[4], altitude)
+            dew_point15hr = dewPointCalc(hourly_temperatures[5], hourly_humidity[5], altitude)
+            dew_point18hr = dewPointCalc(hourly_temperatures[6], hourly_humidity[6], altitude)
+            dew_point21hr = dewPointCalc(hourly_temperatures[7], hourly_humidity[7], altitude)
+            dew_point24hr = dewPointCalc(hourly_temperatures[8], hourly_humidity[8], altitude)
+            current_enthalpy = enthalpyCalc(current_temperature, humidity, altitude)
+            enthalpy3hr = enthalpyCalc(hourly_temperatures[1], hourly_humidity[1], altitude)
+            enthalpy6hr = enthalpyCalc(hourly_temperatures[2], hourly_humidity[2], altitude)
+            enthalpy9hr = enthalpyCalc(hourly_temperatures[3], hourly_humidity[3], altitude)
+            enthalpy12hr = enthalpyCalc(hourly_temperatures[4], hourly_humidity[4], altitude)
+            enthalpy15hr = enthalpyCalc(hourly_temperatures[5], hourly_humidity[5], altitude)
+            enthalpy18hr = enthalpyCalc(hourly_temperatures[6], hourly_humidity[6], altitude)
+            enthalpy21hr = enthalpyCalc(hourly_temperatures[7], hourly_humidity[7], altitude)
+            enthalpy24hr = enthalpyCalc(hourly_temperatures[8], hourly_humidity[8], altitude)
 
-    except KeyError:
-        print("Error fetching initial weather data")
+            hourlydewpoint = [current_dew_point, dew_point3hr, dew_point6hr, dew_point9hr, dew_point12hr, dew_point15hr, dew_point18hr, dew_point21hr, dew_point24hr]
+            maximumDewPt = max(hourlydewpoint)
+            hourlyEnthalpy = [current_enthalpy, enthalpy3hr, enthalpy6hr, enthalpy9hr, enthalpy12hr, enthalpy15hr, enthalpy18hr, enthalpy21hr, enthalpy24hr]
+            minEnthalpy = min(hourlyEnthalpy)
+            minDewpt = min(hourlydewpoint)
+            maximumEnthalpy = max(hourlyEnthalpy)
+
+            return  # Exit the loop once data is successfully fetched
+
+        except requests.exceptions.RequestException as e:
+            print(f"Error fetching data: {e}. Retrying in 10 seconds...")
+            time.sleep(10)  # Wait for 10 seconds before retrying
+
 
 # store the collected data into a dictionary and format/ write to xml format
 def writeXMLWeatherData():
@@ -481,7 +488,6 @@ def runOpenMeteo():
     readXMLSettings()
     # Fetch the weather data using the extracted latitude and longitude
     fetchOpenMeteoWeather(lat, lon)
-
 
 
 # loop to constantly fetch and update weather information
