@@ -3,6 +3,14 @@ SET "SERVICE_NAME=BACnetWeatherDevice"
 SET "APPLICATION_PATH=%~dp0weatherFetch.exe"
 SET "APPLICATION_DIR=%~dp0"
 SET "NSSM_PATH=%~dp0nssm-2.24\win64\nssm.exe"
+SET "VERIFICATION_SCRIPT=%~dp0licenseVerification.exe"
+
+:: Run verification
+"%VERIFICATION_SCRIPT%"
+IF %ERRORLEVEL% NEQ 0 (
+    echo License verification failed. Exiting.
+    exit /b 1
+)
 
 :: Check if NSSM exists in the specified directory
 IF NOT EXIST "%NSSM_PATH%" (
@@ -13,7 +21,6 @@ IF NOT EXIST "%NSSM_PATH%" (
 :: Install the service
 "%NSSM_PATH%" install "%SERVICE_NAME%" "%APPLICATION_PATH%"
 "%NSSM_PATH%" set "%SERVICE_NAME%" "%APPLICATION_DIR%"
-
 
 :: Set additional parameters
 "%NSSM_PATH%" set "%SERVICE_NAME%" AppExit Default Restart
