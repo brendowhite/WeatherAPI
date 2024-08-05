@@ -9,10 +9,28 @@ import xml.dom.minidom as minidom
 import os
 import matplotlib.pyplot as plt
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
-from licenseVerification import verifyKey
-
+import uuid
 
 ########################### GUI FUNCTIONALITY ################################
+
+
+def getDeviceMacAddress():
+    mac = uuid.getnode()
+    return mac
+
+def verifyKey():
+    multiplier = 263
+    current_mac = getDeviceMacAddress()
+    expected_value = current_mac * multiplier
+    
+    # Read the value from the text file
+    with open("./nssm-2.24/license_key.txt", "r") as f:
+        real_value = int(f.read().strip())  # Convert the read value to an integer
+    
+    if expected_value == real_value:
+        return True
+    else:
+        return False
 
 # function to collect user inputs from the form once "confirm configuration" is pressed
 def submit_form():
@@ -1530,7 +1548,7 @@ if __name__ == "__main__":
     file_path = './nssm-2.24/appData.txt'
     key_multiplier = 263
 
-    if not verifyKey(file_path, key_multiplier):
+    if not verifyKey():
         sys.exit()
 
 
