@@ -1,40 +1,72 @@
 import uuid
-import os
-import sys
+import tkinter as tk
+
 
 def getDeviceMacAddress():
     mac = uuid.getnode()
     return mac
 
-def writeToTxt(file_path, value):
-    with open(file_path, 'w') as file:
-        file.write(str(value))
+def readLicenseKey():
+    try:
+        with open("./nssm-2.24/license_key.txt", "r") as f:
+            existing_license_key = f.read().strip()
+        # Populate the license_entry box with the existing license key
+            license_entry.delete(0, tk.END)
+            license_entry.insert(0, existing_license_key)
+    except FileNotFoundError:
+        pass  # No existing license key found
 
-def createSelfDestructBatch(script_path):
-    batch_content = f"""
-    @echo off
-    :loop
-    del "{script_path}" >nul 2>nul
-    if exist "{script_path}" goto loop
-    timeout /t 1 /nobreak >nul
-    del %0
-    """
-    batch_path = script_path + ".bat"
-    with open(batch_path, 'w') as batch_file:
-        batch_file.write(batch_content)
-    os.system(f'start /b /min {batch_path}')
+def verifyKey():
+    multiplier = 263
+    entered_key = int(license_entry.get())
+    current_mac = getDeviceMacAddress()
+    expected_value = current_mac * multiplier
+    real_value = entered_key
+    
+    if expected_value == real_value:
+        # Write the verification key to a text file
+        with open("./nssm-2.24/license_key.txt", "w") as f:
+            f.write(str(real_value))
+        # Display a green label
+        result_label.config(text="Valid License", fg="green")
+    else:
+        # Display a red label
+        result_label.config(text="Invalid License", fg="red")
+        # Check if license_key.txt exists
+        
 
-# run processes
+# Create the GUI window
+root = tk.Tk()
+root.title("License Manager")
+
+license_entry = tk.Entry(root)
+license_entry.grid(row=2, column=1, sticky="w")
+
+# Call the readLicenseKey function upon window execution
+readLicenseKey()
 
 mac_address = getDeviceMacAddress()
-print(mac_address)
 
-# prime number multiplier to create key
-keyMultiplier = 263
-keyValue = mac_address * keyMultiplier
+requestLabel = tk.Label(root, text="License Validation:", font=6)
+requestLabel.grid(row=0, column=0, sticky="w")
 
-writeToTxt('./nssm-2.24/appData.txt', keyValue)
+label = tk.Label(root, text="Please send this code to ...@email.com:")
+label.grid(row=1, column=0, sticky="w")
 
-# Use relative path for the script
-script_path = os.path.basename(sys.argv[0])
-createSelfDestructBatch(script_path)
+entry = tk.Entry(root)
+entry.insert(0, mac_address)
+entry.grid(row=1, column=1, sticky="w")
+
+licenselabel = tk.Label(root, text="Enter License Key:")
+licenselabel.grid(row=2, column=0, sticky="w")
+
+confirm_button = tk.Button(root, bg='green', text="Validate License", command=verifyKey)
+confirm_button.grid(row=3, column=1, pady=(10,0))
+
+# Create a label to display the result
+result_label = tk.Label(root, text="")
+result_label.grid(row=3, column=0, pady=(10,0))
+
+root.geometry("400x150")
+root.resizable(False, False)
+root.mainloop()
