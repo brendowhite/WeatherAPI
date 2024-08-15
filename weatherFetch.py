@@ -1,3 +1,11 @@
+# The purpose of this module is the backend logic that creates weather API requests,
+# creates the virtual BACnet device, whilst also populating the analog values of the BACnet device.
+# This software package was developed by Brendan White whilst interning at Johnson Controls Australia (North Ryde)
+# Source code may only be altered by an authorised employee of Johnson Controls
+# External entities must not attempt to obtain or reproduce this source code.
+# Version 1.0, date modified: 12.08.2024
+
+# python library declaration
 import math
 import requests
 from BAC0.core.devices.local.models import (
@@ -44,22 +52,20 @@ enthalpy15hr = 0
 enthalpy18hr = 0
 enthalpy21hr = 0
 enthalpy24hr = 0
-
 lat = None
 lon = None
 api_token = None
 device_Id = None
 port_Id = None
 num_requests= 1
-# latitude = -33.785791
-# long = 151.121482
 
+    # fetches the device MAC address
 def getDeviceMacAddress():
     mac = uuid.getnode()
     print(mac*263)
     return mac
 
-
+    # takes the device MAC address and compares it to the verification method of * 263
 def verifyKey():
     multiplier = 263
     current_mac = getDeviceMacAddress()
@@ -74,7 +80,7 @@ def verifyKey():
     else:
         return False
     
-
+    # reads the configured device settings, populates variables and feeds them to the requesting logic to create a specific query
 def readXMLSettings():
     global lat
     global lon
@@ -97,17 +103,16 @@ def readXMLSettings():
     port_Id = int(root.find('port_Id').text)
     num_requests = int(root.find('num_requests').text)
 
-# Number of requests per day calculation
+    # Number of requests per day calculation
 def setDailyRequests(num_requests):
 
     # Number of requests per day calculation, this will just be thread calculation time
     requests_sleep = 3600 / (num_requests / 24) # calculates the sleep time in seconds (1hr = 3600 secs)
     return requests_sleep
-    # except ValueError:
-    #     return None
+
     
 
-# Function to calculate dew point
+# Function to calculate the dew point
 def dewPointCalc(temp, humidity, altitude):
     a = 17.27
     b = 237.7
@@ -116,7 +121,7 @@ def dewPointCalc(temp, humidity, altitude):
     dew_point = (b * alpha) / (a - alpha)
     return dew_point
 
-# Function to calculate enthalpy
+# Function to calculate the enthalpy
 def enthalpyCalc(temp, humidity, altitude):
     dew_point = dewPointCalc(temp, humidity, altitude)
     deltaTemp = temp - ((6.5 / 1000) * altitude) # refer to comment above and (standard lapse rate)
@@ -127,7 +132,7 @@ def enthalpyCalc(temp, humidity, altitude):
 
     return enthalpy
 
-# fetch of open weather API
+# fetch logic for Open Weather API 
 def fetchWeatherData(lat, lon, api_token):
     # define global variables to be used in updating analog_values on BACnet device
     global current_temperature, humidity, current_dew_point, current_enthalpy, hourly_temperatures, hourly_humidity, max_temperature, min_temperature, min_humidity, max_humidity
@@ -246,8 +251,8 @@ def writeXMLWeatherData():
         xml_file.write(pretty_xml)
 
 
-## Open - Meteo API code
-# calculate the altitude effect on dew point
+
+# calculate the altitude effect on dew point (Open meteo portion)
 def deltaDewPoint(initialDewPt, altitude):
     dew_point_change_rate = 0.2 / 100  # °C per meter
     # Calculate the dew point change
@@ -259,7 +264,7 @@ def deltaDewPoint(initialDewPt, altitude):
     return adjusted_dew_point
 
 
-# calculate the altitude effect on enthalpy
+# calculate the altitude effect on enthalpy (open meteo portion)
 def deltaEnthalpy(initialEnthalpy, altitude):
     # Enthalpy change rate (approximation)
     enthalpy_change_rate = 0.0065  # kJ/kg per meter
@@ -292,7 +297,7 @@ def calculate_enthalpy(temperature, specific_humidity):
     return enthalpy
 
 
-
+    # logic associated with Open Meteo API source
 def fetchOpenMeteoWeather(lat, lon):
     # Define the URL for the Open-Meteo API
     url = "https://api.open-meteo.com/v1/forecast"
@@ -329,6 +334,7 @@ def fetchOpenMeteoWeather(lat, lon):
     current_hour = now.hour
 
     # Start from the current hour and take every 3rd element up to +24 hours
+    # this logic uses system time to calculate the element that it uses
     for i in range(current_hour, current_hour + 25, 3):
         index = i % 25  # Ensure the index wraps around if it exceeds 24
         if index >= len(hourly_data['time']):
@@ -416,7 +422,7 @@ def fetchOpenMeteoWeather(lat, lon):
         BOMenthalpy0h, BOMenthalpy3h, BOMenthalpy6h, BOMenthalpy9h,
         BOMenthalpy12h, BOMenthalpy15h, BOMenthalpy18h, BOMenthalpy21h, BOMenthalpy24h
     ])
-
+        # runs this function to create an XML of the data
     writeWeatherDataToXML(BOMtemp0h, BOMtemp3h, BOMtemp6h, BOMtemp9h, BOMtemp12h, BOMtemp15h, BOMtemp18h, BOMtemp21h, BOMtemp24h,
     BOMhumidity0h, BOMhumidity3h, BOMhumidity6h, BOMhumidity9h, BOMhumidity12h, BOMhumidity15h, BOMhumidity18h, BOMhumidity21h, BOMhumidity24h,
     BOMdewpoint0h, BOMdewpoint3h, BOMdewpoint6h, BOMdewpoint9h, BOMdewpoint12h, BOMdewpoint15h, BOMdewpoint18h, BOMdewpoint21h, BOMdewpoint24h,
@@ -495,7 +501,7 @@ def writeWeatherDataToXML(BOMtemp0h, BOMtemp3h, BOMtemp6h, BOMtemp9h, BOMtemp12h
     with open("C:\\BACnetWeatherFetchData\OpenMeteo_weather_data.xml", "w") as f:
         f.write(xml_str)
 
-
+    # runs open meteo requests functionality from input configuration
 def runOpenMeteo():
     # Read the XML settings to get latitude and longitude
     readXMLSettings()
@@ -503,15 +509,16 @@ def runOpenMeteo():
     fetchOpenMeteoWeather(lat, lon)
 
 
-# loop to constantly fetch and update weather information
+# loop to constantly fetch and update weather information in the background
 def fetchWeatherPeriodically():
+    calculated_sleep = setDailyRequests()
     while True:
         readXMLSettings()
         #sleep_time = setDailyRequests(num_requests)
         fetchWeatherData(lat, lon, api_token)
         runOpenMeteo()
         writeXMLWeatherData()
-        time.sleep(5)
+        time.sleep(calculated_sleep)
 
 
 # Create a thread for periodic weather fetching
