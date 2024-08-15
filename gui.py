@@ -77,7 +77,7 @@ def submit_form():
             return
         # refer to function for logic
         if not validateNumRequests(num_requests):
-            messagebox.showerror("Error", "Please enter less than 1000 daily requests")
+            messagebox.showerror("Error", "Please enter between 24-1000 daily requests")
             return
         
         # Create the folder to store configuration data if it doesn't exist already
@@ -95,7 +95,7 @@ def submit_form():
 
     # tests to check if input is valid
 def validateNumRequests(num_requests):
-    return 1 <= num_requests <= 1000
+    return 24 <= num_requests <= 1000
 
     # function to validate longitude input
 def validate_lon(lon):
@@ -957,7 +957,7 @@ class Page1(Page):
         altitude_entry = tk.Entry(self)
         altitude_label.grid(row=3, column=0, sticky="w")
         altitude_entry.grid(row=3, column=1, sticky="w")
-        requests_label = tk.Label(self, text="Num. Requests 24H (1-1000):")
+        requests_label = tk.Label(self, text="Num. Requests 24H (24-1000):")
         requests_entry = tk.Entry(self)
         requests_label.grid(row=3, column=3, sticky="w")
         requests_entry.grid(row=3, column=4, sticky="w")
