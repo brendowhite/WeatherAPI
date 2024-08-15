@@ -1,3 +1,10 @@
+# The purpose of this module is the design and functionality of the weather fetching bacnet device
+# This software package was developed by Brendan White whilst interning at Johnson Controls Australia (North Ryde)
+# Source code may only be altered by an authorised employee of Johnson Controls
+# External entities must not attempt to obtain or reproduce this source code.
+# Version 1.0, date modified: 12.08.2024
+
+# library imports
 import tkinter as tk
 import time
 from tkinter import messagebox
@@ -10,14 +17,16 @@ import os
 import matplotlib.pyplot as plt
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 import uuid
+from tkinter import PhotoImage
 
 ########################### GUI FUNCTIONALITY ################################
 
-
+# fetches device MAC address
 def getDeviceMacAddress():
     mac = uuid.getnode()
     return mac
 
+# verifies if the license key exists and is valid. Blocks execution of code if invalid
 def verifyKey():
     multiplier = 263
     current_mac = getDeviceMacAddress()
@@ -33,6 +42,7 @@ def verifyKey():
         return False
 
 # function to collect user inputs from the form once "confirm configuration" is pressed
+# this will be written to an XML file format
 def submit_form():
     try:
         # gather the inputs from the input boxes
@@ -48,7 +58,7 @@ def submit_form():
         if not validate_lat(lat):
             messagebox.showerror("Error", "Invalid latitude, please enter a value between -90 and 90 degrees.")
             return
-        
+        # refer to function for logic
         if not validate_lon(lon):
             messagebox.showerror("Error", "Invalid longitude, please enter a value between -180 and 180 degrees.")
             return
@@ -57,15 +67,15 @@ def submit_form():
             messagebox.showerror("Error", "Please fill in all fields before submitting.")
             return
 
-        # Check if the API key is valid (you can replace this with your own validation logic)
+        # refer to function for logic
         if not validateAPIToken(api_token):
             messagebox.showerror("Error", "Invalid API key. Please check your token.")
             return
-        
+        # refer to function for logic
         if not validDeviceId(device_Id):
             messagebox.showerror("Error", "Please enter a device ID between 0 and 4194302")
             return
-        
+        # refer to function for logic
         if not validateNumRequests(num_requests):
             messagebox.showerror("Error", "Please enter less than 1000 daily requests")
             return
@@ -126,18 +136,19 @@ def update_time():
 def stopProgram():
     sys.exit()
 
-
+    # this will run all the functions associated reading the weather fetch data and setting the GUI boxes with the values
+    # this is refreshed every 15 seconds
 def runReadAndSet():
     while True:
         readWeatherXML()
         setTextBoxes()
         updateOpenMeteoBoxes()
         time.sleep(15)
-
+    # creates a thread to run the above function as a background repeating process
 def runReadThread():
     thread = threading.Thread(daemon=True, target=runReadAndSet)
     thread.start()
-
+    # enables the text boxes to be cleared so that they can be overwritten
 def clearOpenWeatherBoxes():
     entries = [
         currenttemp_entry, maxtemp_entry, minimumtemp_entry, temp3hr_entry, temp6hr_entry, temp9hr_entry, temp12hr_entry, temp15hr_entry, temp18hr_entry, temp21hr_entry, temp24hr_entry,
@@ -149,7 +160,7 @@ def clearOpenWeatherBoxes():
     for entry in entries:
         entry.delete(0, tk.END)
         entry.config(bg='white')
-
+    # same as above function but for open meteo page...
 def clearOpenMeteoBoxes():
         # List of all temperature, humidity, and dew point entry boxes
     entries = [
@@ -173,7 +184,7 @@ def clearOpenMeteoBoxes():
     for entry in entries:
         entry.delete(0, tk.END)
         entry.config(bg='white')
-
+    # writes configuration page to an XML so that is can be used by the backend fetching software
 def writeParamtersToXML(lat, lon, inputAlt, api_token, device_Id, port_Id, num_requests):
     # Create an XML structure
     root = ET.Element("settings")
@@ -207,6 +218,9 @@ def writeParamtersToXML(lat, lon, inputAlt, api_token, device_Id, port_Id, num_r
     with open("C:\\BACnetWeatherFetchData\settings.xml", "w") as xml_file:
         xml_file.write(pretty_xml)
 
+    # This function will operate so that the previously used settings will populate 
+    # if no previous settings the boxes will be empty
+    # note: license key will not populate for security
 def loadSettingsXML():
     settingsXML = 'C:\\BACnetWeatherFetchData\\settings.xml'
     
@@ -243,7 +257,7 @@ def loadSettingsXML():
         port_entry.delete(0, tk.END)
         requests_entry.delete(0, tk.END)
 
-
+    # this function reads the open weather XML data, this is then stored inside internal variables
 def readWeatherXML():
     global current_temperature, max_temperature, minimum_temperature, temp_3, temp_6, temp_9, temp_12, temp_15, temp_18, temp_18, temp_21, temp_24
     global current_humidity, max_humidity, minimum_humidity, humid_3, humid_6, humid_9, humid_12, humid_15, humid_18, humid_21, humid_24
@@ -304,6 +318,7 @@ def readWeatherXML():
     enth_21 = float(root.find('enthalpy21hr').text)
     enth_24 = float(root.find('enthalpy24hr').text)
 
+    # creates a dictionary of the Open meteo BOM data XML and stores in internal variables
 def readOpenMeteoWeather():
     # reading path for weather xml
     xmlfile = 'C:\\BACnetWeatherFetchData\\OpenMeteo_weather_data.xml'
@@ -358,6 +373,7 @@ def readOpenMeteoWeather():
     }
     return data
 
+    # updates the open meteo text boxes from the internally stored variables
 def updateOpenMeteoBoxes():
     # create instance of weather information to access current data
     weather_data= readOpenMeteoWeather()
@@ -1540,12 +1556,19 @@ root.geometry("700x500")
 root.title("Weather API Fetching Virtual BACnet Device (V1.0)")
 root.resizable(False, False)
 
+# Load the icon image
+icon_path = "./nssm-2.24/BACnet Icon.png"
+icon_image = PhotoImage(file=icon_path)
+
+# Set the window icon
+root.iconphoto(True, icon_image)
+
 # loads in the previous config settings except for the personal API key
 loadSettingsXML()
 
 if __name__ == "__main__":
     # will run license verification before window initialisation
-    file_path = './nssm-2.24/appData.txt'
+    file_path = './nssm-2.24/license_key.txt'
     key_multiplier = 263
 
     if not verifyKey():
