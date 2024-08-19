@@ -24,7 +24,6 @@ import pytz
 import sys
 import uuid
 
-
 # Global variables for weather data
 current_temperature = 0
 humidity = 0
@@ -52,17 +51,31 @@ enthalpy15hr = 0
 enthalpy18hr = 0
 enthalpy21hr = 0
 enthalpy24hr = 0
+BOMtemp0h = 0
+BOMtemp3h = 0
+BOMtemp6h = 0
+BOMtemp9h = 0
+BOMtemp12h = 0
+BOMtemp15h = 0 
+BOMtemp18h = 0
+BOMtemp21h = 0
+BOMtemp24h = 0
+BOMhumidity0h = BOMhumidity3h = BOMhumidity6h = BOMhumidity9h = BOMhumidity12h = BOMhumidity15h = BOMhumidity18h = BOMhumidity21h = BOMhumidity24h = 0
+BOMdewpoint0h = BOMdewpoint3h = BOMdewpoint6h = BOMdewpoint9h = BOMdewpoint12h = BOMdewpoint15h = BOMdewpoint18h = BOMdewpoint21h = BOMdewpoint24h = 0
+BOMenthalpy0h = BOMenthalpy3h = BOMenthalpy6h = BOMenthalpy9h = BOMenthalpy12h = BOMenthalpy15h = BOMenthalpy18h = BOMenthalpy21h = BOMenthalpy24h = 0
+BOMmax_dewpoint = BOMmax_enthalpy = BOMmax_humidity = BOMmax_temp = 0
+BOMminimum_dewpoint = BOMminimum_enthalpy = BOMminimum_humidity = BOMminimum_temp = 0
+
 lat = None
 lon = None
 api_token = None
 device_Id = None
 port_Id = None
-num_requests= 1
+IP_address = None
 
     # fetches the device MAC address
 def getDeviceMacAddress():
     mac = uuid.getnode()
-    print(mac*263)
     return mac
 
     # takes the device MAC address and compares it to the verification method of * 263
@@ -87,6 +100,7 @@ def readXMLSettings():
     global altitude
     global api_token
     global device_Id
+    global IP_address
     global port_Id
     global num_requests
 
@@ -100,15 +114,22 @@ def readXMLSettings():
     altitude = float(root.find('altitude').text)
     api_token = root.find('api_token').text
     device_Id = int(root.find('device_Id').text)
+    # Check if the IP address is '0' and set it to None if it is
+    ip_address_element = root.find('ip_address')
+    if ip_address_element.text == '0':
+        IP_address = None
+    else:
+        IP_address = str(ip_address_element.text)
+    
     port_Id = int(root.find('port_Id').text)
     num_requests = int(root.find('num_requests').text)
-
-    # Number of requests per day calculation
-def setDailyRequests(num_requests):
-
+   
     # Number of requests per day calculation, this will just be thread calculation time
-    requests_sleep = 3600 / (num_requests / 24) # calculates the sleep time in seconds (1hr = 3600 secs)
-    return requests_sleep
+def setDailyRequests(num_requests):
+    daily_to_hourly = 24 / num_requests
+    hourly_to_mins = 60 * daily_to_hourly
+    sleeptime = hourly_to_mins * 60
+    return sleeptime
 
     
 
@@ -134,18 +155,63 @@ def enthalpyCalc(temp, humidity, altitude):
 
 # fetch logic for Open Weather API 
 def fetchWeatherData(lat, lon, api_token):
-    # define global variables to be used in updating analog_values on BACnet device
+    # Read settings from XML
+    tree = ET.parse('C:\\BACnetWeatherFetchData\\settings.xml')
+    root = tree.getroot()
+
+    lat = float(root.find('latitude').text)
+    lon = float(root.find('longitude').text)
+    api_token = root.find('api_token').text
+    api_source = int(root.find('OpenWeather_api_source').text)
+    altitude = float(root.find('altitude').text)
+
+    # Define global variables to be used in updating analog_values on BACnet device
     global current_temperature, humidity, current_dew_point, current_enthalpy, hourly_temperatures, hourly_humidity, max_temperature, min_temperature, min_humidity, max_humidity
     global dew_point3hr, dew_point6hr, dew_point9hr, dew_point12hr, dew_point15hr, dew_point18hr, dew_point21hr, dew_point24hr, minEnthalpy, minDewpt
     global enthalpy3hr, enthalpy6hr, enthalpy9hr, enthalpy12hr, enthalpy15hr, enthalpy18hr, enthalpy21hr, enthalpy24hr, maximumDewPt, maximumEnthalpy
- 
+
+    # Check if the API source is enabled
+    if api_source == 0:
+        # Set all global variables to 0
+        current_temperature = 0
+        humidity = 0
+        current_dew_point = 0
+        current_enthalpy = 0
+        hourly_temperatures = [0] * 9
+        hourly_humidity = [0] * 9
+        max_temperature = 0
+        min_temperature = 0
+        min_humidity = 0
+        max_humidity = 0
+        dew_point3hr = 0
+        dew_point6hr = 0
+        dew_point9hr = 0
+        dew_point12hr = 0
+        dew_point15hr = 0
+        dew_point18hr = 0
+        dew_point21hr = 0
+        dew_point24hr = 0
+        minEnthalpy = 0
+        minDewpt = 0
+        enthalpy3hr = 0
+        enthalpy6hr = 0
+        enthalpy9hr = 0
+        enthalpy12hr = 0
+        enthalpy15hr = 0
+        enthalpy18hr = 0
+        enthalpy21hr = 0
+        enthalpy24hr = 0
+        maximumDewPt = 0
+        maximumEnthalpy = 0
+        return
+
     # Open Weather Map API with 3 arguments, latitude, longitude and weather api token. Metric by default
     url = f'http://api.openweathermap.org/data/2.5/forecast?lat={lat}&lon={lon}&units=metric&appid={api_token}'
     response = requests.get(url)
     data = response.json()
 
     try:
-        # key data pulled from the API 
+        # Key data pulled from the API 
         hourly_data = data['list'][0:9]
         hourly_temperatures = [hour['main']['temp'] for hour in hourly_data]
         hourly_humidity = [hour['main']['humidity'] for hour in hourly_data]
@@ -176,7 +242,7 @@ def fetchWeatherData(lat, lon, api_token):
         enthalpy21hr = enthalpyCalc(hourly_temperatures[7], hourly_humidity[7], altitude)
         enthalpy24hr = enthalpyCalc(hourly_temperatures[8], hourly_humidity[8], altitude)
 
-        hourlydewpoint = [current_dew_point, dew_point3hr,dew_point6hr, dew_point9hr, dew_point12hr, dew_point15hr, dew_point18hr, dew_point21hr, dew_point24hr]
+        hourlydewpoint = [current_dew_point, dew_point3hr, dew_point6hr, dew_point9hr, dew_point12hr, dew_point15hr, dew_point18hr, dew_point21hr, dew_point24hr]
         maximumDewPt = max(hourlydewpoint)
         hourlyEnthalpy = [current_enthalpy, enthalpy3hr, enthalpy6hr, enthalpy9hr, enthalpy12hr, enthalpy15hr, enthalpy18hr, enthalpy21hr, enthalpy24hr]
         minEnthalpy = min(hourlyEnthalpy)
@@ -299,6 +365,77 @@ def calculate_enthalpy(temperature, specific_humidity):
 
     # logic associated with Open Meteo API source
 def fetchOpenMeteoWeather(lat, lon):
+    # Make weather information global to access it inside other functions
+    global BOMtemp0h, BOMtemp3h, BOMtemp6h, BOMtemp9h, BOMtemp12h, BOMtemp15h, BOMtemp18h, BOMtemp21h, BOMtemp24h
+    global BOMhumidity0h, BOMhumidity3h, BOMhumidity6h, BOMhumidity9h, BOMhumidity12h, BOMhumidity15h, BOMhumidity18h, BOMhumidity21h, BOMhumidity24h
+    global BOMdewpoint0h, BOMdewpoint3h, BOMdewpoint6h, BOMdewpoint9h, BOMdewpoint12h, BOMdewpoint15h, BOMdewpoint18h, BOMdewpoint21h, BOMdewpoint24h
+    global BOMenthalpy0h, BOMenthalpy3h, BOMenthalpy6h, BOMenthalpy9h, BOMenthalpy12h, BOMenthalpy15h, BOMenthalpy18h, BOMenthalpy21h, BOMenthalpy24h
+    global BOMmax_dewpoint, BOMmax_enthalpy, BOMmax_humidity, BOMmax_temp
+    global BOMminimum_dewpoint, BOMminimum_enthalpy, BOMminimum_humidity, BOMminimum_temp
+
+    # Read settings from XML
+    tree = ET.parse('C:\\BACnetWeatherFetchData\\settings.xml')
+    root = tree.getroot()
+    api_source = int(root.find('OpenMeteo_api_source').text)
+
+    # Check if the API source is enabled
+    if api_source == 0:
+        # Set all global variables to 0
+        BOMtemp0h = 0
+        BOMtemp3h = 0
+        BOMtemp6h = 0
+        BOMtemp9h = 0
+        BOMtemp12h = 0
+        BOMtemp15h = 0
+        BOMtemp18h = 0
+        BOMtemp21h = 0
+        BOMtemp24h = 0
+        BOMhumidity0h = 0
+        BOMhumidity3h = 0
+        BOMhumidity6h = 0
+        BOMhumidity9h = 0
+        BOMhumidity12h = 0
+        BOMhumidity15h = 0
+        BOMhumidity18h = 0
+        BOMhumidity21h = 0
+        BOMhumidity24h = 0
+        BOMdewpoint0h = 0
+        BOMdewpoint3h = 0
+        BOMdewpoint6h = 0
+        BOMdewpoint9h = 0
+        BOMdewpoint12h = 0
+        BOMdewpoint15h = 0
+        BOMdewpoint18h = 0
+        BOMdewpoint21h = 0
+        BOMdewpoint24h = 0
+        BOMenthalpy0h = 0
+        BOMenthalpy3h = 0
+        BOMenthalpy6h = 0
+        BOMenthalpy9h = 0
+        BOMenthalpy12h = 0
+        BOMenthalpy15h = 0
+        BOMenthalpy18h = 0
+        BOMenthalpy21h = 0
+        BOMenthalpy24h = 0
+        BOMmax_dewpoint = 0
+        BOMmax_enthalpy = 0
+        BOMmax_humidity = 0
+        BOMmax_temp = 0
+        BOMminimum_dewpoint = 0
+        BOMminimum_enthalpy = 0
+        BOMminimum_humidity = 0
+        BOMminimum_temp = 0
+
+        # runs this function to create an XML of the data
+        writeWeatherDataToXML(BOMtemp0h, BOMtemp3h, BOMtemp6h, BOMtemp9h, BOMtemp12h, BOMtemp15h, BOMtemp18h, BOMtemp21h, BOMtemp24h,
+        BOMhumidity0h, BOMhumidity3h, BOMhumidity6h, BOMhumidity9h, BOMhumidity12h, BOMhumidity15h, BOMhumidity18h, BOMhumidity21h, BOMhumidity24h,
+        BOMdewpoint0h, BOMdewpoint3h, BOMdewpoint6h, BOMdewpoint9h, BOMdewpoint12h, BOMdewpoint15h, BOMdewpoint18h, BOMdewpoint21h, BOMdewpoint24h,
+        BOMenthalpy0h, BOMenthalpy3h, BOMenthalpy6h, BOMenthalpy9h, BOMenthalpy12h, BOMenthalpy15h, BOMenthalpy18h, BOMenthalpy21h, BOMenthalpy24h,
+        BOMmax_temp, BOMmax_humidity, BOMmax_dewpoint, BOMmax_enthalpy,
+        BOMminimum_temp, BOMminimum_humidity, BOMminimum_dewpoint, BOMminimum_enthalpy)
+
+        return
+
     # Define the URL for the Open-Meteo API
     url = "https://api.open-meteo.com/v1/forecast"
 
@@ -511,14 +648,14 @@ def runOpenMeteo():
 
 # loop to constantly fetch and update weather information in the background
 def fetchWeatherPeriodically():
-    calculated_sleep = setDailyRequests()
+    readXMLSettings()
+    dailyCallWait = setDailyRequests(num_requests)
     while True:
         readXMLSettings()
-        #sleep_time = setDailyRequests(num_requests)
         fetchWeatherData(lat, lon, api_token)
         runOpenMeteo()
         writeXMLWeatherData()
-        time.sleep(calculated_sleep)
+        time.sleep(dailyCallWait)
 
 
 # Create a thread for periodic weather fetching
@@ -527,322 +664,638 @@ weather_thread.start()
 
 
 # # Create the virtual BACnet device below, it will include a number of different analog_values for weather metrics
-def start_device(device_Id, port_Id):
+def start_device(device_Id, port_Id): #IP_address
     # will run license verification before window initialisation
     if not verifyKey():
         sys.exit()
         
-    virtualDevice = BAC0.lite(deviceId=device_Id, port=port_Id)
+    virtualDevice = BAC0.lite(deviceId=device_Id, port=port_Id, ip=IP_address)
     time.sleep(1)
 
-    # Analog Value creation for BACnet device 
+    # Analog Value creation for BACnet device
+    # Instance numbers 1-99 are allocated to OpenWeatherMap API
+    # Instance numbers 100-199 are allocated to Open Meteo API 
+    # Continue this naming convention for sources added later ... 200-299 and so on.
+
+    # Open weather analog points 1-99
     _new_objects = analog_value(
         instance=1,
-        name="Current Temperature",
+        name="Open Weather Map Current Temperature",
         description="Current Temperature in degC", 
         presentValue=current_temperature,
         properties={"units": "degreesCelsius"},
     )
     _new_objects = analog_value(
         instance=2,
-        name="Current Humidity",
+        name="Open Weather Map Current Humidity",
         description="Current Humidity in percentage",
         presentValue=humidity,
         properties={"units": "percent"},
     )
     _new_objects = analog_value(
         instance=3,
-        name="Dew Point",
-        description="Dew Point Temperature",
+        name="Open Weather Map Current Dew Point",
+        description="Current Dew Point Temperature",
         presentValue=current_dew_point,
         properties={"units": "degreesCelsius"}
     )
     _new_objects = analog_value(
         instance=4,
-        name="Enthalpy",
-        description="Specific Enthalpy",
+        name="Open Weather Map Current Enthalpy",
+        description="CUrrent Specific Enthalpy",
         presentValue=current_enthalpy,
         properties={"units":"kilojoulesPerKilogram"}
     )
     _new_objects = analog_value(
         instance=5,
-        name="Predicted Temperature +3hr",
+        name="Open Weather Map Forecast Temperature +3hr",
         description="Predicted Temperature in 3hrs",
         presentValue=hourly_temperatures[1],
         properties={"units":"degreesCelsius"}
     )
     _new_objects = analog_value(
         instance=6,
-        name="Predicted Temperature +6hr",
+        name="Open Weather Map Forecast Temperature +6hr",
         description="Predicted Temperature in 6hrs",
         presentValue=hourly_temperatures[2],
         properties={"units":"degreesCelsius"}
     )
     _new_objects = analog_value(
         instance=7,
-        name="Predicted Temperature +9hr",
+        name="Open Weather Map Forecast Temperature +9hr",
         description="Predicted Temperature in 9hrs",
         presentValue=hourly_temperatures[3],
         properties={"units":"degreesCelsius"}
     )
     _new_objects = analog_value(
         instance=8,
-        name="Predicted Temperature +12hr",
+        name="Open Weather Map Forecast Temperature +12hr",
         description="Predicted Temperature in 12hrs",
         presentValue=hourly_temperatures[4],
         properties={"units":"degreesCelsius"}
     )   
     _new_objects = analog_value(
         instance=9,
-        name="Predicted Temperature +15hr",
+        name="Open Weather Map Forecast Temperature +15hr",
         description="Predicted Temperature in 15hrs",
         presentValue=hourly_temperatures[5],
         properties={"units":"degreesCelsius"}
     ) 
     _new_objects = analog_value(
         instance=10,
-        name="Predicted Temperature +18hr",
+        name="Open Weather Map Forecast Temperature +18hr",
         description="Predicted Temperature in 18hrs",
         presentValue=hourly_temperatures[6],
         properties={"units":"degreesCelsius"}
     )
     _new_objects = analog_value(
         instance=11,
-        name="Predicted Temperature +21hr",
+        name="Open Weather Map Forecast Temperature +21hr",
         description="Predicted Temperature in 21hrs",
         presentValue=hourly_temperatures[7],
         properties={"units":"degreesCelsius"}
     )
     _new_objects = analog_value(
         instance=12,
-        name="Predicted Temperature +24hr",
+        name="Open Weather Map Forecast Temperature +24hr",
         description="Predicted Temperature in 24hrs",
         presentValue=hourly_temperatures[8],
         properties={"units":"degreesCelsius"}
     )
     _new_objects = analog_value(
         instance=13,
-        name="Predicted Humidity +3hr",
+        name="Open Weather Map Forecast Humidity +3hr",
         description="Predicted Humidity in 3hrs",
         presentValue=hourly_humidity[1],
         properties={"units":"percent"}
     )
     _new_objects = analog_value(
         instance=14,
-        name="Predicted Humidity +6hr",
+        name="Open Weather Map Forecast Humidity +6hr",
         description="Predicted Humidity in 6hrs",
         presentValue=hourly_humidity[2],
         properties={"units":"percent"}
     )
     _new_objects = analog_value(
         instance=15,
-        name="Predicted Humidity +9hr",
+        name="Open Weather Map Forecast Humidity +9hr",
         description="Predicted Humidity in 9hrs",
         presentValue=hourly_humidity[3],
         properties={"units":"percent"}
     )
     _new_objects = analog_value(
         instance=16,
-        name="Predicted Humidity +12hr",
+        name="Open Weather Map Forecast Humidity +12hr",
         description="Predicted Humidity in 12hrs",
         presentValue=hourly_humidity[4],
         properties={"units":"percent"}
     )
     _new_objects = analog_value(
         instance=17,
-        name="Predicted Humidity +15hr",
+        name="Open Weather Map Forecast Humidity +15hr",
         description="Predicted Temperature in 15hrs",
         presentValue=hourly_humidity[5],
         properties={"units":"percent"}
     )
     _new_objects = analog_value(
         instance=18,
-        name="Predicted Humidity +18hr",
+        name="Open Weather Map Forecast Humidity +18hr",
         description="Predicted Humidity in 18hrs",
         presentValue=hourly_humidity[6],
         properties={"units":"percent"}
     )
     _new_objects = analog_value(
         instance=19,
-        name="Predicted Humidity +21hr",
+        name="Open Weather Map Forecast Humidity +21hr",
         description="Predicted Humidity in 21hrs",
         presentValue=hourly_humidity[7],
         properties={"units":"percent"}
     )
     _new_objects = analog_value(
         instance=20,
-        name="Predicted Humidity +24hr",
+        name="Open Weather Map Forecast Humidity +24hr",
         description="Predicted Humidity in 24hrs",
         presentValue=hourly_humidity[8],
         properties={"units":"percent"}
     )
     _new_objects = analog_value(
         instance=21,
-        name="Predicted Enthalpy +3hr",
+        name="Open Weather Map Forecast Enthalpy +3hr",
         description="Predicted Enthalpy in 3hrs",
         presentValue=enthalpy3hr,
         properties={"units":"kilojoulesPerKilogram"}
     )
     _new_objects = analog_value(
         instance=22,
-        name="Predicted Enthalpy +6hr",
+        name="Open Weather Map Forecast Enthalpy +6hr",
         description="Predicted Enthalpy in 6hrs",
         presentValue=enthalpy6hr,
         properties={"units":"kilojoulesPerKilogram"}
     )
     _new_objects = analog_value(
         instance=23,
-        name="Predicted Enthalpy +9hr",
+        name="Open Weather Map Forecast Enthalpy +9hr",
         description="Predicted Enthalpy in 9hrs",
         presentValue=enthalpy9hr,
         properties={"units":"kilojoulesPerKilogram"}
     )
     _new_objects = analog_value(
         instance=24,
-        name="Predicted Enthalpy +12hr",
+        name="Open Weather Map Forecast Enthalpy +12hr",
         description="Predicted Enthalpy in 12hrs",
         presentValue=enthalpy12hr,
         properties={"units":"kilojoulesPerKilogram"}
     )
     _new_objects = analog_value(
         instance=25,
-        name="Predicted Enthalpy +15hr",
+        name="Open Weather Map Forecast Enthalpy +15hr",
         description="Predicted Enthalpy in 15hrs",
         presentValue=enthalpy15hr,
         properties={"units":"kilojoulesPerKilogram"}
     )
     _new_objects = analog_value(
         instance=26,
-        name="Predicted Enthalpy +18hr",
+        name="Open Weather Map Forecast Enthalpy +18hr",
         description="Predicted Enthalpy in 18hrs",
         presentValue=enthalpy18hr,
         properties={"units":"kilojoulesPerKilogram"}
     )
     _new_objects = analog_value(
         instance=27,
-        name="Predicted Enthalpy +21hr",
+        name="Open Weather Map Forecast Enthalpy +21hr",
         description="Predicted Enthalpy in 21hrs",
         presentValue=enthalpy21hr,
         properties={"units":"kilojoulesPerKilogram"}
     )
     _new_objects = analog_value(
         instance=28,
-        name="Predicted Enthalpy +24hr",
+        name="Open Weather Map Forecast Enthalpy +24hr",
         description="Predicted Enthalpy in 24hrs",
         presentValue=enthalpy24hr,
         properties={"units":"kilojoulesPerKilogram"}
     )
     _new_objects = analog_value(
         instance=29,
-        name="Predicted Dew Point +3hr",
+        name="Open Weather Map Forecast Dew Point +3hr",
         description="Predicted Enthalpy in 3hrs",
         presentValue=dew_point3hr,
         properties={"units":"degreesCelsius"}
     )
     _new_objects = analog_value(
         instance=30,
-        name="Predicted Dew Point +6hr",
+        name="Open Weather Map Forecast Dew Point +6hr",
         description="Predicted Enthalpy in 6hrs",
         presentValue=dew_point6hr,
         properties={"units":"degreesCelsius"}
     )
     _new_objects = analog_value(
         instance=31,
-        name="Predicted Dew Point +9hr",
+        name="Open Weather Map Forecast Dew Point +9hr",
         description="Predicted Enthalpy in 12hrs",
         presentValue=dew_point12hr,
         properties={"units":"degreesCelsius"}
     )
     _new_objects = analog_value(
         instance=32,
-        name="Predicted Dew Point +12hr",
+        name="Open Weather Map Forecast Dew Point +12hr",
         description="Predicted Enthalpy in 12hrs",
         presentValue=dew_point12hr,
         properties={"units":"degreesCelsius"}
     )
     _new_objects = analog_value(
         instance=33,
-        name="Predicted Dew Point +15hr",
+        name="Open Weather Map Forecast Dew Point +15hr",
         description="Predicted Enthalpy in 15hrs",
         presentValue=dew_point15hr,
         properties={"units":"degreesCelsius"}
     )
     _new_objects = analog_value(
         instance=34,
-        name="Predicted Dew Point +18hr",
+        name="Open Weather Map Forecast Dew Point +18hr",
         description="Predicted Enthalpy in 18hrs",
         presentValue=dew_point18hr,
         properties={"units":"degreesCelsius"}
     )
     _new_objects = analog_value(
         instance=35,
-        name="Predicted Dew Point +21hr",
+        name="Open Weather Map Forecast Dew Point +21hr",
         description="Predicted Enthalpy in 21hrs",
         presentValue=dew_point21hr,
         properties={"units":"degreesCelsius"}
     )
     _new_objects = analog_value(
         instance=36,
-        name="Predicted Dew Point +24hr",
+        name="Open Weather Map Forecast Dew Point +24hr",
         description="Predicted Enthalpy in 24hrs",
         presentValue=dew_point24hr,
         properties={"units":"degreesCelsius"}
     )
     _new_objects = analog_value(
         instance=37,
-        name="Minimum Humidity 24H",
+        name="Open Weather Map Minimum Humidity 24H",
         description="Minimum Humidity in the next 24HR",
         presentValue=min_humidity,
         properties={"units":"percent"}
     )
     _new_objects = analog_value(
         instance=38,
-        name="Minimum Temperature 24H",
+        name="Open Weather Map Minimum Temperature 24H",
         description="Minimum Temperature in the next 24HR",
         presentValue=min_temperature,
         properties={"units":"degreesCelsius"}
     )
     _new_objects = analog_value(
         instance=39,
-        name="Maximum Humidity 24H",
+        name="Open Weather Map Maximum Humidity 24H",
         description="Maximum Humidity in the next 24HR",
         presentValue=max_humidity,
         properties={"units":"percent"}
     )
     _new_objects = analog_value(
         instance=40,
-        name="Maximum Temperature 24H",
+        name="Open Weather Map Maximum Temperature 24H",
         description="Max Temperature in the next 24HR",
         presentValue=max_temperature,
         properties={"units":"degreesCelsius"}
     )
     _new_objects = analog_value(
         instance=41,
-        name="Minimum Enthalpy 24H",
+        name="Open Weather Map Minimum Enthalpy 24H",
         description="Minimum Enthalpy in the next 24HR",
         presentValue=minEnthalpy,
         properties={"units":"kilojoulesPerKilogram"}
     )
     _new_objects = analog_value(
         instance=42,
-        name="Maximum Enthalpy 24H",
+        name="Open Weather Map Maximum Enthalpy 24H",
         description="Max Enthalpy in the next 24HR",
         presentValue=maximumEnthalpy,
         properties={"units":"kilojoulesPerKilogram"}
     )
     _new_objects = analog_value(
         instance=43,
-        name="Maximum Dew Point 24H",
+        name="Open Weather Map Maximum Dew Point 24H",
         description="Max Dew Point in the next 24HR",
         presentValue=maximumDewPt,
         properties={"units":"degreesCelsius"}
     )
     _new_objects = analog_value(
         instance=44,
-        name="Minimum Dew Point 24H",
+        name="Open Weather Map Minimum Dew Point 24H",
         description="Min Dew Point in the next 24HR",
         presentValue=minDewpt,
         properties={"units":"degreesCelsius"}
+    )
+
+    # Open Meteo Analog Objects instances from 100-199
+
+    _new_objects = analog_value(
+        instance=100,
+        name="Open Meteo Current Temperature",
+        description="Current Temperature in degC",
+        presentValue=BOMtemp0h,
+        properties={"units":"degreesCelsius"}
+    )
+    _new_objects = analog_value(
+        instance=101,
+        name="Open Meteo Current Humidity",
+        description="Current Humidity in %",
+        presentValue=BOMhumidity0h,
+        properties={"units":"percent"}
+    )
+    _new_objects = analog_value(
+        instance=102,
+        name="Open Meteo Current Dew Point",
+        description="Current Dew Point in degC",
+        presentValue=BOMdewpoint0h,
+        properties={"units":"degreesCelsius"}
+    )
+    _new_objects = analog_value(
+        instance=103,
+        name="Open Meteo Current Enthalpy",
+        description="Current Enthalpy Kj/Kg",
+        presentValue=BOMenthalpy0h,
+        properties={"units":"kilojoulesPerKilogram"}
+    )
+    _new_objects = analog_value(
+        instance=104,
+        name="Open Meteo Temperature Forecast +3h",
+        description="Predicted Temperature in 3hrs",
+        presentValue=BOMtemp3h,
+        properties={"units":"degreesCelsius"}
+    )
+    _new_objects = analog_value(
+        instance=105,
+        name="Open Meteo Temperature Forecast +6h",
+        description="Predicted Temperature in 6hrs",
+        presentValue=BOMtemp6h,
+        properties={"units":"degreesCelsius"}
+    )
+    _new_objects = analog_value(
+        instance=106,
+        name="Open Meteo Temperature Forecast +9h",
+        description="Predicted Temperature in 9hrs",
+        presentValue=BOMtemp9h,
+        properties={"units":"degreesCelsius"}
+    )
+    _new_objects = analog_value(
+        instance=107,
+        name="Open Meteo Temperature Forecast +12h",
+        description="Predicted Temperature in 12hrs",
+        presentValue=BOMtemp12h,
+        properties={"units":"degreesCelsius"}
+    )
+    _new_objects = analog_value(
+        instance=108,
+        name="Open Meteo Temperature Forecast +15h",
+        description="Predicted Temperature in 15hrs",
+        presentValue=BOMtemp15h,
+        properties={"units":"degreesCelsius"}
+    )
+    _new_objects = analog_value(
+        instance=109,
+        name="Open Meteo Temperature Forecast +18h",
+        description="Predicted Temperature in 18hrs",
+        presentValue=BOMtemp18h,
+        properties={"units":"degreesCelsius"}
+    )
+    _new_objects = analog_value(
+        instance=110,
+        name="Open Meteo Temperature Forecast +21h",
+        description="Predicted Temperature in 21hrs",
+        presentValue=BOMtemp21h,
+        properties={"units":"degreesCelsius"} # 10.0.0.150
+    )
+    _new_objects = analog_value(
+        instance=111,
+        name="Open Meteo Temperature Forecast +24h",
+        description="Predicted Temperature in 24hrs",
+        presentValue=BOMtemp24h,
+        properties={"units":"degreesCelsius"}
+    )
+    _new_objects = analog_value(
+        instance=112,
+        name="Open Meteo Humidity Forecast +3h",
+        description="Predicted Humidity in 3hrs",
+        presentValue=BOMhumidity3h,
+        properties={"units":"percent"}
+    )
+    _new_objects = analog_value(
+        instance=113,
+        name="Open Meteo Humidity Forecast +6h",
+        description="Predicted Humidity in 6hrs",
+        presentValue=BOMhumidity6h,
+        properties={"units":"percent"}
+    )
+    _new_objects = analog_value(
+        instance=114,
+        name="Open Meteo Humidity Forecast +9h",
+        description="Predicted Humidity in 9hrs",
+        presentValue=BOMhumidity9h,
+        properties={"units":"percent"}
+    )
+    _new_objects = analog_value(
+        instance=115,
+        name="Open Meteo Humidity Forecast +12h",
+        description="Predicted Humidity in 12hrs",
+        presentValue=BOMhumidity12h,
+        properties={"units":"percent"}
+    )
+    _new_objects = analog_value(
+        instance=116,
+        name="Open Meteo Humidity Forecast +15h",
+        description="Predicted Humidity in 15hrs",
+        presentValue=BOMhumidity15h,
+        properties={"units":"percent"}
+    )
+    _new_objects = analog_value(
+        instance=117,
+        name="Open Meteo Humidity Forecast +18h",
+        description="Predicted Humidity in 18hrs",
+        presentValue=BOMhumidity18h,
+        properties={"units":"percent"}
+    )
+    _new_objects = analog_value(
+        instance=118,
+        name="Open Meteo Humidity Forecast +21h",
+        description="Predicted Humidity in 21hrs",
+        presentValue=BOMhumidity21h,
+        properties={"units":"percent"}
+    )
+    _new_objects = analog_value(
+        instance=119,
+        name="Open Meteo Humidity Forecast +24h",
+        description="Predicted Humidity in 24hrs",
+        presentValue=BOMhumidity24h,
+        properties={"units":"percent"}
+    )
+    _new_objects = analog_value(
+        instance=120,
+        name="Open Meteo Dew Point Forecast +3h",
+        description="Predicted Dew Point in 3hrs",
+        presentValue=BOMdewpoint3h,
+        properties={"units":"degreesCelsius"}
+    )
+    _new_objects = analog_value(
+        instance=121,
+        name="Open Meteo Dew Point Forecast +6h",
+        description="Predicted Dew Point in 6hrs",
+        presentValue=BOMdewpoint6h,
+        properties={"units":"degreesCelsius"}
+    )
+    _new_objects = analog_value(
+        instance=122,
+        name="Open Meteo Dew Point Forecast +9h",
+        description="Predicted Dew Point in 9hrs",
+        presentValue=BOMdewpoint9h,
+        properties={"units":"degreesCelsius"}
+    )
+    _new_objects = analog_value(
+        instance=123,
+        name="Open Meteo Dew Point Forecast +12h",
+        description="Predicted Dew Point in 12hrs",
+        presentValue=BOMdewpoint12h,
+        properties={"units":"degreesCelsius"}
+    )
+    _new_objects = analog_value(
+        instance=124,
+        name="Open Meteo Dew Point Forecast +15h",
+        description="Predicted Dew Point in 15hrs",
+        presentValue=BOMdewpoint15h,
+        properties={"units":"degreesCelsius"}
+    )
+    _new_objects = analog_value(
+        instance=125,
+        name="Open Meteo Dew Point Forecast +18h",
+        description="Predicted Dew Point in 18hrs",
+        presentValue=BOMdewpoint18h,
+        properties={"units":"degreesCelsius"}
+    )
+    _new_objects = analog_value(
+        instance=126,
+        name="Open Meteo Dew Point Forecast +21h",
+        description="Predicted Dew Point in 21hrs",
+        presentValue=BOMdewpoint21h,
+        properties={"units":"degreesCelsius"}
+    )
+    _new_objects = analog_value(
+        instance=127,
+        name="Open Meteo Dew Point Forecast +24h",
+        description="Predicted Dew Point in 24hrs",
+        presentValue=BOMdewpoint24h,
+        properties={"units":"degreesCelsius"}
+    )
+    _new_objects = analog_value(
+        instance=128,
+        name="Open Meteo Enthalpy Forecast +3h",
+        description="Predicted Enthalpy in 3hrs",
+        presentValue=BOMenthalpy3h,
+        properties={"units":"kilojoulesPerKilogram"}
+    )
+    _new_objects = analog_value(
+        instance=129,
+        name="Open Meteo Enthalpy Forecast +6h",
+        description="Predicted Enthalpy in 6hrs",
+        presentValue=BOMenthalpy6h,
+        properties={"units":"kilojoulesPerKilogram"}
+    )
+    _new_objects = analog_value(
+        instance=130,
+        name="Open Meteo Enthalpy Forecast +9h",
+        description="Predicted Enthalpy in 9hrs",
+        presentValue=BOMenthalpy9h,
+        properties={"units":"kilojoulesPerKilogram"}
+    )
+    _new_objects = analog_value(
+        instance=131,
+        name="Open Meteo Enthalpy Forecast +12h",
+        description="Predicted Enthalpy in 12hrs",
+        presentValue=BOMenthalpy12h,
+        properties={"units":"kilojoulesPerKilogram"}
+    )
+    _new_objects = analog_value(
+        instance=132,
+        name="Open Meteo Enthalpy Forecast +15h",
+        description="Predicted Enthalpy in 15hrs",
+        presentValue=BOMenthalpy15h,
+        properties={"units":"kilojoulesPerKilogram"}
+    )
+    _new_objects = analog_value(
+        instance=133,
+        name="Open Meteo Enthalpy Forecast +18h",
+        description="Predicted Enthalpy in 18hrs",
+        presentValue=BOMenthalpy18h,
+        properties={"units":"kilojoulesPerKilogram"}
+    )
+    _new_objects = analog_value(
+        instance=134,
+        name="Open Meteo Enthalpy Forecast +21h",
+        description="Predicted Enthalpy in 21hrs",
+        presentValue=BOMenthalpy21h,
+        properties={"units":"kilojoulesPerKilogram"}
+    )
+    _new_objects = analog_value(
+        instance=135,
+        name="Open Meteo Enthalpy Forecast +24h",
+        description="Predicted Enthalpy in 24hrs",
+        presentValue=BOMenthalpy24h,
+        properties={"units":"kilojoulesPerKilogram"}
+    )
+    _new_objects = analog_value(
+        instance=136,
+        name="Open Meteo Maximum Temperature 24H",
+        description="Maximum Temperature for 24hrs",
+        presentValue=BOMmax_temp,
+        properties={"units":"degreesCelsius"}
+    )
+    _new_objects = analog_value(
+        instance=137,
+        name="Open Meteo Maximum Humidity 24H",
+        description="Maximum Humidity for 24hrs",
+        presentValue=BOMmax_humidity,
+        properties={"units":"percent"}
+    )
+    _new_objects = analog_value(
+        instance=138,
+        name="Open Meteo Maximum Dew Point 24H",
+        description="Maximum Dew Point for 24hrs",
+        presentValue=BOMmax_dewpoint,
+        properties={"units":"degreesCelsius"}
+    )
+    _new_objects = analog_value(
+        instance=139,
+        name="Open Meteo Maximum Enthalpy 24H",
+        description="Maximum Enthalpy for 24hrs",
+        presentValue=BOMmax_enthalpy,
+        properties={"units":"kilojoulesPerKilogram"}
+    )
+    _new_objects = analog_value(
+        instance=140,
+        name="Open Meteo Minimum Temperature 24H",
+        description="Minimum Enthalpy for 24hrs",
+        presentValue=BOMminimum_temp,
+        properties={"units":"degreesCelsius"}
+    )
+    _new_objects = analog_value(
+        instance=141,
+        name="Open Meteo Minimum Humidity 24H",
+        description="Minimum Humidity for 24hrs",
+        presentValue=BOMminimum_humidity,
+        properties={"units":"percent"}
+    )
+    _new_objects = analog_value(
+        instance=142,
+        name="Open Meteo Minimum Dew Point 24H",
+        description="Minimum Dew Point for 24hrs",
+        presentValue=BOMminimum_dewpoint,
+        properties={"units":"degreesCelsius"}
+    )
+    _new_objects = analog_value(
+        instance=143,
+        name="Open Meteo Minimum Enthalpy 24H",
+        description="Minimum Enthalpy for 24hrs",
+        presentValue=BOMminimum_enthalpy,
+        properties={"units":"kilojoulesPerKilogram"}
     )
 
     _new_objects.add_objects_to_application(virtualDevice)
@@ -851,64 +1304,115 @@ def start_device(device_Id, port_Id):
 try:
     # reading the xml weather data and updating the internal variables of the BACnet device
     readXMLSettings()
-    bacnet_device = start_device(device_Id, port_Id)
+    bacnet_device = start_device(device_Id, port_Id) #IP_address
     # run an infinite loop that updates current weather values
     while True:
-        
-        loop_sleep = setDailyRequests(num_requests)
     # Code below will update the weather data stored inside the BACnet device every 31 minutes
     # update the current weather values for temp, humidity, dew pt and enthalpy
-        bacnet_device["Current Temperature"].presentValue = current_temperature
-        bacnet_device["Current Humidity"].presentValue = humidity
-        bacnet_device["Dew Point"].presentValue = current_dew_point
-        bacnet_device["Enthalpy"].presentValue = current_enthalpy
+        bacnet_device["Open Weather Map Current Temperature"].presentValue = current_temperature
+        bacnet_device["Open Weather Map Current Humidity"].presentValue = humidity
+        bacnet_device["Open Weather Map Current Dew Point"].presentValue = current_dew_point
+        bacnet_device["Open Weather Map Current Enthalpy"].presentValue = current_enthalpy
     # update the predicted temperature readings 
-        bacnet_device["Predicted Temperature +3hr"].presentValue=hourly_temperatures[1]
-        bacnet_device["Predicted Temperature +6hr"].presentValue=hourly_temperatures[2]
-        bacnet_device["Predicted Temperature +9hr"].presentValue=hourly_temperatures[3]
-        bacnet_device["Predicted Temperature +12hr"].presentValue=hourly_temperatures[4]
-        bacnet_device["Predicted Temperature +15hr"].presentValue=hourly_temperatures[5]
-        bacnet_device["Predicted Temperature +18hr"].presentValue=hourly_temperatures[6]
-        bacnet_device["Predicted Temperature +21hr"].presentValue=hourly_temperatures[7]
-        bacnet_device["Predicted Temperature +24hr"].presentValue=hourly_temperatures[8]
+        bacnet_device["Open Weather Map Forecast Temperature +3hr"].presentValue=hourly_temperatures[1]
+        bacnet_device["Open Weather Map Forecast Temperature +6hr"].presentValue=hourly_temperatures[2]
+        bacnet_device["Open Weather Map Forecast Temperature +9hr"].presentValue=hourly_temperatures[3]
+        bacnet_device["Open Weather Map Forecast Temperature +12hr"].presentValue=hourly_temperatures[4]
+        bacnet_device["Open Weather Map Forecast Temperature +15hr"].presentValue=hourly_temperatures[5]
+        bacnet_device["Open Weather Map Forecast Temperature +18hr"].presentValue=hourly_temperatures[6]
+        bacnet_device["Open Weather Map Forecast Temperature +21hr"].presentValue=hourly_temperatures[7]
+        bacnet_device["Open Weather Map Forecast Temperature +24hr"].presentValue=hourly_temperatures[8]
     # update the predicted humidity readings
-        bacnet_device["Predicted Humidity +3hr"].presentValue=hourly_humidity[1]
-        bacnet_device["Predicted Humidity +6hr"].presentValue=hourly_humidity[2]
-        bacnet_device["Predicted Humidity +9hr"].presentValue=hourly_humidity[3]
-        bacnet_device["Predicted Humidity +12hr"].presentValue=hourly_humidity[4]
-        bacnet_device["Predicted Humidity +15hr"].presentValue=hourly_humidity[5]
-        bacnet_device["Predicted Humidity +18hr"].presentValue=hourly_humidity[6]
-        bacnet_device["Predicted Humidity +21hr"].presentValue=hourly_humidity[7]
-        bacnet_device["Predicted Humidity +24hr"].presentValue=hourly_humidity[8]
+        bacnet_device["Open Weather Map Forecast Humidity +3hr"].presentValue=hourly_humidity[1]
+        bacnet_device["Open Weather Map Forecast Humidity +6hr"].presentValue=hourly_humidity[2]
+        bacnet_device["Open Weather Map Forecast Humidity +9hr"].presentValue=hourly_humidity[3]
+        bacnet_device["Open Weather Map Forecast Humidity +12hr"].presentValue=hourly_humidity[4]
+        bacnet_device["Open Weather Map Forecast Humidity +15hr"].presentValue=hourly_humidity[5]
+        bacnet_device["Open Weather Map Forecast Humidity +18hr"].presentValue=hourly_humidity[6]
+        bacnet_device["Open Weather Map Forecast Humidity +21hr"].presentValue=hourly_humidity[7]
+        bacnet_device["Open Weather Map Forecast Humidity +24hr"].presentValue=hourly_humidity[8]
     # update the enthalty prediction readings
-        bacnet_device["Predicted Enthalpy +3hr"].presentValue=enthalpy3hr
-        bacnet_device["Predicted Enthalpy +6hr"].presentValue=enthalpy6hr
-        bacnet_device["Predicted Enthalpy +9hr"].presentValue=enthalpy9hr
-        bacnet_device["Predicted Enthalpy +12hr"].presentValue=enthalpy12hr
-        bacnet_device["Predicted Enthalpy +15hr"].presentValue=enthalpy15hr
-        bacnet_device["Predicted Enthalpy +18hr"].presentValue=enthalpy18hr
-        bacnet_device["Predicted Enthalpy +21hr"].presentValue=enthalpy21hr
-        bacnet_device["Predicted Enthalpy +24hr"].presentValue=enthalpy24hr
+        bacnet_device["Open Weather Map Forecast Enthalpy +3hr"].presentValue=enthalpy3hr
+        bacnet_device["Open Weather Map Forecast Enthalpy +6hr"].presentValue=enthalpy6hr
+        bacnet_device["Open Weather Map Forecast Enthalpy +9hr"].presentValue=enthalpy9hr
+        bacnet_device["Open Weather Map Forecast Enthalpy +12hr"].presentValue=enthalpy12hr
+        bacnet_device["Open Weather Map Forecast Enthalpy +15hr"].presentValue=enthalpy15hr
+        bacnet_device["Open Weather Map Forecast Enthalpy +18hr"].presentValue=enthalpy18hr
+        bacnet_device["Open Weather Map Forecast Enthalpy +21hr"].presentValue=enthalpy21hr
+        bacnet_device["Open Weather Map Forecast Enthalpy +24hr"].presentValue=enthalpy24hr
     # update the dew point readings
-        bacnet_device["Predicted Dew Point +3hr"].presentValue=dew_point3hr
-        bacnet_device["Predicted Dew Point +6hr"].presentValue=dew_point6hr
-        bacnet_device["Predicted Dew Point +9hr"].presentValue=dew_point9hr
-        bacnet_device["Predicted Dew Point +12hr"].presentValue=dew_point12hr
-        bacnet_device["Predicted Dew Point +15hr"].presentValue=dew_point15hr
-        bacnet_device["Predicted Dew Point +18hr"].presentValue=dew_point18hr
-        bacnet_device["Predicted Dew Point +21hr"].presentValue=dew_point21hr
-        bacnet_device["Predicted Dew Point +24hr"].presentValue=dew_point24hr
+        bacnet_device["Open Weather Map Forecast Dew Point +3hr"].presentValue=dew_point3hr
+        bacnet_device["Open Weather Map Forecast Dew Point +6hr"].presentValue=dew_point6hr
+        bacnet_device["Open Weather Map Forecast Dew Point +9hr"].presentValue=dew_point9hr
+        bacnet_device["Open Weather Map Forecast Dew Point +12hr"].presentValue=dew_point12hr
+        bacnet_device["Open Weather Map Forecast Dew Point +15hr"].presentValue=dew_point15hr
+        bacnet_device["Open Weather Map Forecast Dew Point +18hr"].presentValue=dew_point18hr
+        bacnet_device["Open Weather Map Forecast Dew Point +21hr"].presentValue=dew_point21hr
+        bacnet_device["Open Weather Map Forecast Dew Point +24hr"].presentValue=dew_point24hr
     # update the avg and max humidity and temp readings
-        bacnet_device["Minimum Humidity 24H"].presentValue=min_humidity
-        bacnet_device["Minimum Temperature 24H"].presentValue=min_temperature
-        bacnet_device["Minimum Enthalpy 24H"].presentValue=minEnthalpy
-        bacnet_device["Minimum Dew Point 24H"].presentValue=minDewpt
-        bacnet_device["Maximum Temperature 24H"].presentValue=max_temperature
-        bacnet_device["Maximum Humidity 24H"].presentValue=max_humidity
-        bacnet_device["Maximum Enthalpy 24H"].presentValue=maximumEnthalpy
-        bacnet_device["Maximum Dew Point 24H"].presentValue=maximumDewPt
+        bacnet_device["Open Weather Map Minimum Humidity 24H"].presentValue=min_humidity
+        bacnet_device["Open Weather Map Minimum Temperature 24H"].presentValue=min_temperature
+        bacnet_device["Open Weather Map Minimum Enthalpy 24H"].presentValue=minEnthalpy
+        bacnet_device["Open Weather Map Minimum Dew Point 24H"].presentValue=minDewpt
+        bacnet_device["Open Weather Map Maximum Temperature 24H"].presentValue=max_temperature
+        bacnet_device["Open Weather Map Maximum Humidity 24H"].presentValue=max_humidity
+        bacnet_device["Open Weather Map Maximum Enthalpy 24H"].presentValue=maximumEnthalpy
+        bacnet_device["Open Weather Map Maximum Dew Point 24H"].presentValue=maximumDewPt
 
+        ################################################
+        # start of Open Meteo (BOM) data updating points
+        ################################################
 
-        time.sleep(loop_sleep + 5) 
+        bacnet_device["Open Meteo Current Temperature"].presentValue = BOMtemp0h
+        bacnet_device["Open Meteo Current Humidity"].presentValue = BOMhumidity0h
+        bacnet_device["Open Meteo Current Dew Point"].presentValue = BOMdewpoint0h
+        bacnet_device["Open Meteo Current Enthalpy"].presentValue = BOMenthalpy0h
+    # update the predicted temperature readings 
+        bacnet_device["Open Meteo Temperature Forecast +3h"].presentValue=BOMtemp3h
+        bacnet_device["Open Meteo Temperature Forecast +6h"].presentValue=BOMtemp6h
+        bacnet_device["Open Meteo Temperature Forecast +9h"].presentValue=BOMtemp9h
+        bacnet_device["Open Meteo Temperature Forecast +12h"].presentValue=BOMtemp12h
+        bacnet_device["Open Meteo Temperature Forecast +15h"].presentValue=BOMtemp15h
+        bacnet_device["Open Meteo Temperature Forecast +18h"].presentValue=BOMtemp18h
+        bacnet_device["Open Meteo Temperature Forecast +21h"].presentValue=BOMtemp21h
+        bacnet_device["Open Meteo Temperature Forecast +24h"].presentValue=BOMtemp24h
+    # update the predicted humidity readings
+        bacnet_device["Open Meteo Humidity Forecast +3h"].presentValue=BOMhumidity3h
+        bacnet_device["Open Meteo Humidity Forecast +6h"].presentValue=BOMhumidity6h
+        bacnet_device["Open Meteo Humidity Forecast +9h"].presentValue=BOMhumidity9h
+        bacnet_device["Open Meteo Humidity Forecast +12h"].presentValue=BOMhumidity12h
+        bacnet_device["Open Meteo Humidity Forecast +15h"].presentValue=BOMhumidity15h
+        bacnet_device["Open Meteo Humidity Forecast +18h"].presentValue=BOMhumidity18h
+        bacnet_device["Open Meteo Humidity Forecast +21h"].presentValue=BOMhumidity21h
+        bacnet_device["Open Meteo Humidity Forecast +24h"].presentValue=BOMhumidity24h
+    # update the enthalty prediction readings
+        bacnet_device["Open Meteo Enthalpy Forecast +3h"].presentValue=BOMenthalpy3h
+        bacnet_device["Open Meteo Enthalpy Forecast +6h"].presentValue=BOMenthalpy6h
+        bacnet_device["Open Meteo Enthalpy Forecast +9h"].presentValue=BOMenthalpy9h
+        bacnet_device["Open Meteo Enthalpy Forecast +12h"].presentValue=BOMenthalpy12h
+        bacnet_device["Open Meteo Enthalpy Forecast +15h"].presentValue=BOMenthalpy15h
+        bacnet_device["Open Meteo Enthalpy Forecast +18h"].presentValue=BOMenthalpy18h
+        bacnet_device["Open Meteo Enthalpy Forecast +21h"].presentValue=BOMenthalpy21h
+        bacnet_device["Open Meteo Enthalpy Forecast +24h"].presentValue=BOMenthalpy24h
+    # update the dew point readings
+        bacnet_device["Open Meteo Dew Point Forecast +3h"].presentValue=BOMdewpoint3h
+        bacnet_device["Open Meteo Dew Point Forecast +6h"].presentValue=BOMdewpoint6h
+        bacnet_device["Open Meteo Dew Point Forecast +9h"].presentValue=BOMdewpoint9h
+        bacnet_device["Open Meteo Dew Point Forecast +12h"].presentValue=BOMdewpoint12h
+        bacnet_device["Open Meteo Dew Point Forecast +15h"].presentValue=BOMdewpoint15h
+        bacnet_device["Open Meteo Dew Point Forecast +18h"].presentValue=BOMdewpoint18h
+        bacnet_device["Open Meteo Dew Point Forecast +21h"].presentValue=BOMdewpoint21h
+        bacnet_device["Open Meteo Dew Point Forecast +24h"].presentValue=BOMdewpoint24h
+    # update the avg and max humidity and temp readings
+        bacnet_device["Open Meteo Maximum Temperature 24H"].presentValue=BOMmax_temp
+        bacnet_device["Open Meteo Maximum Humidity 24H"].presentValue=BOMmax_humidity
+        bacnet_device["Open Meteo Maximum Enthalpy 24H"].presentValue=BOMmax_enthalpy
+        bacnet_device["Open Meteo Maximum Dew Point 24H"].presentValue=BOMmax_dewpoint
+        bacnet_device["Open Meteo Minimum Temperature 24H"].presentValue=BOMminimum_temp
+        bacnet_device["Open Meteo Minimum Humidity 24H"].presentValue=BOMminimum_humidity
+        bacnet_device["Open Meteo Minimum Enthalpy 24H"].presentValue=BOMminimum_enthalpy
+        bacnet_device["Open Meteo Minimum Dew Point 24H"].presentValue=BOMminimum_dewpoint
+
+        time.sleep(10) # loop_sleep
 except Exception as e:
         print(f"Error: {e}")
