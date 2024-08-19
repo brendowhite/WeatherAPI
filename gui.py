@@ -2,7 +2,7 @@
 # This software package was developed by Brendan White whilst interning at Johnson Controls Australia (North Ryde)
 # Source code may only be altered by an authorised employee of Johnson Controls
 # External entities must not attempt to obtain or reproduce this source code.
-# Version 1.0, date modified: 12.08.2024
+# Version 1.0, date modified: 16.08.2024
 
 # library imports
 import tkinter as tk
@@ -32,14 +32,28 @@ def verifyKey():
     current_mac = getDeviceMacAddress()
     expected_value = current_mac * multiplier
     
-    # Read the value from the text file
-    with open("./nssm-2.24/license_key.txt", "r") as f:
-        real_value = int(f.read().strip())  # Convert the read value to an integer
-    
-    if expected_value == real_value:
-        return True
-    else:
+    try:
+        # Read the value from the text file
+        with open("./nssm-2.24/license_key.txt", "r") as f:
+            real_value = int(f.read().strip())  # Convert the read value to an integer
+        
+        if expected_value == real_value:
+            return True
+        else:
+            return False
+    except FileNotFoundError:
         return False
+    
+def show_popup_and_exit():
+    root = tk.Tk()
+    root.withdraw()  # Hide the main window
+    messagebox.showerror("License Verification Failed", "License verification failed. Please contact nswsales@jci.com")
+    root.after(10, root.destroy)  # Close the popup after 10 seconds
+    root.mainloop()
+    sys.exit()
+
+if not verifyKey():
+        show_popup_and_exit()
 
 # function to collect user inputs from the form once "confirm configuration" is pressed
 # this will be written to an XML file format
@@ -53,6 +67,9 @@ def submit_form():
         device_Id = int(device_entry.get())
         port_Id = port_entry.get()
         num_requests = int(requests_entry.get())
+        IP_address = str(IP_address_entry.get())
+        OpenWeather_api_source = OpenWeather_source_var.get()
+        OpenMeteo_api_source = OpenMeteo_source_var.get()
 
     # validation checks for values and empty boxes
         if not validate_lat(lat):
@@ -63,14 +80,19 @@ def submit_form():
             messagebox.showerror("Error", "Invalid longitude, please enter a value between -180 and 180 degrees.")
             return
         # Check if all fields are filled
-        if not (lat and lon and inputAlt and api_token and device_Id and port_Id):
+        if not (lat and lon and inputAlt and device_Id and port_Id):
             messagebox.showerror("Error", "Please fill in all fields before submitting.")
             return
+        
+        if not validateAltitude(inputAlt):
+            messagebox.showerror("Error", "Please enter an altitude greater than 0.1m" )
+            return
 
-        # refer to function for logic
-        if not validateAPIToken(api_token):
+        # refer to function for logic explanation
+        if OpenWeather_api_source == 1 and not validateAPIToken(api_token):
             messagebox.showerror("Error", "Invalid API key. Please check your token.")
             return
+        
         # refer to function for logic
         if not validDeviceId(device_Id):
             messagebox.showerror("Error", "Please enter a device ID between 0 and 4194302")
@@ -85,7 +107,7 @@ def submit_form():
         if not os.path.exists(folder_path):
             os.makedirs(folder_path)
         # write the entered parameters to the xml
-        writeParamtersToXML(lat, lon, inputAlt, api_token, device_Id, port_Id, num_requests)
+        writeParametersToXML(lat, lon, inputAlt, api_token, device_Id, port_Id, num_requests, IP_address, OpenWeather_api_source, OpenMeteo_api_source)
 
     except ValueError:
         messagebox.showerror("Error", "Invalid input! Please enter valid numeric values for latitude, longitude, and altitude.")
@@ -107,20 +129,27 @@ def validate_lat(lat):
 
     # function to validate weather API token input
 def validateAPIToken(WEATHER_API_TOKEN):
+    if not WEATHER_API_TOKEN:
+        print("API key is empty. Skipping validation.")
+        return False
+
     try:
-        # dummy request to confirm token validity
+        # Dummy request to confirm token validity
         url = f"http://api.openweathermap.org/data/2.5/weather?q=London&appid={WEATHER_API_TOKEN}"
         response = requests.get(url)
-        # checks code that confirms validity of the key
+        # Checks code that confirms validity of the key
         if response.status_code == 200:
             print("API key is valid.")
             return True
-        else: # returns that the key is invalid
+        else:  # Returns that the key is invalid
             print("API key is invalid.")
             return False
     except requests.RequestException:
         print("Error occurred while checking the API key.")
-        return False    
+        return False  
+
+def validateAltitude(inputAlt):
+    return 0.1 <= inputAlt
 
 # check that ensures that device id does not exceed bacnet protocol limit
 def validDeviceId(device_Id):
@@ -144,6 +173,7 @@ def runReadAndSet():
         setTextBoxes()
         updateOpenMeteoBoxes()
         time.sleep(15)
+
     # creates a thread to run the above function as a background repeating process
 def runReadThread():
     thread = threading.Thread(daemon=True, target=runReadAndSet)
@@ -185,7 +215,7 @@ def clearOpenMeteoBoxes():
         entry.delete(0, tk.END)
         entry.config(bg='white')
     # writes configuration page to an XML so that is can be used by the backend fetching software
-def writeParamtersToXML(lat, lon, inputAlt, api_token, device_Id, port_Id, num_requests):
+def writeParametersToXML(lat, lon, inputAlt, api_token, device_Id, port_Id, num_requests, IP_address, OpenWeather_api_source, OpenMeteo_api_source):
     # Create an XML structure
     root = ET.Element("settings")
 
@@ -210,6 +240,15 @@ def writeParamtersToXML(lat, lon, inputAlt, api_token, device_Id, port_Id, num_r
 
     num_requests_elem = ET.SubElement(root, "num_requests")
     num_requests_elem.text = str(num_requests)
+
+    IP_address_elem = ET.SubElement(root, "ip_address")
+    IP_address_elem.text = str(IP_address)
+
+    OpenWeather_api_source_elem = ET.SubElement(root, "OpenWeather_api_source")
+    OpenWeather_api_source_elem.text = str(OpenWeather_api_source)
+
+    OpenMeteo_api_source_elem = ET.SubElement(root, "OpenMeteo_api_source")
+    OpenMeteo_api_source_elem.text = str(OpenMeteo_api_source)
 
     # Save the XML to a file
     tree_str = ET.tostring(root, encoding="utf-8")
@@ -247,6 +286,12 @@ def loadSettingsXML():
         num_requests = int(root.find('num_requests').text)
         requests_entry.delete(0, tk.END)
         requests_entry.insert(0, num_requests)
+        IP_address = str(root.find('ip_address').text)
+        IP_address_entry.delete(0, tk.END)
+        IP_address_entry.insert(0, IP_address)
+        entered_api = str(root.find('api_token').text)
+        api_key_entry.delete(0, tk.END)
+        api_key_entry.insert(0, entered_api)
 
     else:
         # If the file doesn't exist, you can set the default state of your entries here
@@ -256,6 +301,7 @@ def loadSettingsXML():
         device_entry.delete(0, tk.END)
         port_entry.delete(0, tk.END)
         requests_entry.delete(0, tk.END)
+        IP_address_entry.delete(0, tk.END)
 
     # this function reads the open weather XML data, this is then stored inside internal variables
 def readWeatherXML():
@@ -908,6 +954,8 @@ def setTextBoxes():
         else:
             enthalpy_entries[key].config(bg='white')
 
+
+
 ######################################### GUI START #########################################
 
 class Page(tk.Frame):
@@ -931,6 +979,9 @@ class Page1(Page):
         global port_entry
         global device_entry
         global requests_entry
+        global OpenWeather_source_var
+        global OpenMeteo_source_var
+        global IP_address_entry
 
         # Row 1 Widgets
         latitude_label = tk.Label(self, text="Latitude (-90 <-> +90):")
@@ -965,6 +1016,10 @@ class Page1(Page):
         # Row 4 label
         api_heading_label = tk.Label(self, text= "WEATHER API SOURCES", font=("segoe", 12, "bold"))
         api_heading_label.grid(row=4, column=0, sticky="w", pady=(10,0))
+        IP_label = tk.Label(self, text="Enter Local Endpoint IP:")
+        IP_label.grid(row=4, column=3, sticky="w")
+        IP_address_entry = tk.Entry(self)
+        IP_address_entry.grid(row=4, column=4, sticky="w")
 
         # Open weather widgets (R5)
         openweather_api_label = tk.Label(self, text="Open Weather API:")
@@ -976,6 +1031,11 @@ class Page1(Page):
 
         api_key_label.grid(row=5, column=2, sticky="w", pady=(10,0))
         api_key_entry.grid(row=5, column=3, sticky="w", pady=(10,0))
+
+        # checkbox for open weather api selection
+        OpenWeather_source_var = tk.IntVar()
+        api_source_checkbox = tk.Checkbutton(self, variable=OpenWeather_source_var)
+        api_source_checkbox.grid(row=5, column=4, sticky="w", pady=(10,0))
 
          # Row 6 widgets
         api2_label = tk.Label(self, text="Open-Meteo API (BOM):")
@@ -989,6 +1049,10 @@ class Page1(Page):
         api2_label.grid(row=6, column=0, sticky="w")
         api2_key_label.grid(row=6, column=2)
         api2_entry.grid(row=6, column=3, sticky='w')
+
+        OpenMeteo_source_var = tk.IntVar()
+        OpenMeteoAPI_source_checkbox = tk.Checkbutton(self, variable=OpenMeteo_source_var)
+        OpenMeteoAPI_source_checkbox.grid(row=6, column=4, sticky="w", pady=(10,0))
 
         # Row 8 widgets (Start and Stop buttons)
         start_button = tk.Button(self, text="Confirm\nConfiguration", width=15, height=3, bg="green", command=(submit_form))
@@ -1548,6 +1612,8 @@ class MainView(tk.Frame):
         update_time()
 
 
+
+
     # Opens GUI window, configures size and front page widget packing
 root = tk.Tk()
 main_view = MainView(root)  # Create an instance of your MainView
@@ -1556,7 +1622,7 @@ root.geometry("700x500")
 root.title("Weather API Fetching Virtual BACnet Device (V1.0)")
 root.resizable(False, False)
 
-# Load the icon image
+# # Load the icon image
 icon_path = "./nssm-2.24/BACnet Icon.png"
 icon_image = PhotoImage(file=icon_path)
 
