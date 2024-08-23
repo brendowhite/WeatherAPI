@@ -19,7 +19,7 @@ current_time = datetime.datetime.now()
 import xml.etree.ElementTree as ET
 from xml.dom import minidom
 import threading
-from datetime import datetime
+from datetime import datetime, timedelta
 import pytz
 import sys
 import uuid
@@ -72,6 +72,12 @@ api_token = None
 device_Id = None
 port_Id = None
 IP_address = None
+
+date = None
+month = None
+year = None
+hour = None
+minute = None
 
     # fetches the device MAC address
 def getDeviceMacAddress():
@@ -316,7 +322,14 @@ def writeXMLWeatherData():
     with open("C:\\BACnetWeatherFetchData\weather_data.xml", "w") as xml_file:
         xml_file.write(pretty_xml)
 
-
+def getDateMonthYearHourMin():
+    global date, month, year, hour, minute
+    now = datetime.now()
+    date = now.day
+    month = now.month
+    year = now.year
+    hour = now.hour
+    minute = now.minute
 
 # calculate the altitude effect on dew point (Open meteo portion)
 def deltaDewPoint(initialDewPt, altitude):
@@ -361,7 +374,6 @@ def calculate_enthalpy(temperature, specific_humidity):
     # Calculate enthalpy (kJ/kg)
     enthalpy = cp * temperature + specific_humidity * (cpv * temperature + Lv)
     return enthalpy
-
 
     # logic associated with Open Meteo API source
 def fetchOpenMeteoWeather(lat, lon):
@@ -468,7 +480,7 @@ def fetchOpenMeteoWeather(lat, lon):
 
     # Get the current hour in military time
     now = datetime.now(sydney_tz)
-    current_hour = now.hour
+    current_hour = now.hour + 2 # offset of +2 is used to counteract an issue with pulled OPEN-Meteo data coming in always 2 hours behind.
 
     # Start from the current hour and take every 3rd element up to +24 hours
     # this logic uses system time to calculate the element that it uses
@@ -652,6 +664,7 @@ def fetchWeatherPeriodically():
     dailyCallWait = setDailyRequests(num_requests)
     while True:
         readXMLSettings()
+        getDateMonthYearHourMin()
         fetchWeatherData(lat, lon, api_token)
         runOpenMeteo()
         writeXMLWeatherData()
@@ -664,13 +677,24 @@ weather_thread.start()
 
 
 # # Create the virtual BACnet device below, it will include a number of different analog_values for weather metrics
-def start_device(device_Id, port_Id): #IP_address
+def start_device(device_Id, port_Id, IP_address): #IP_address
     # will run license verification before window initialisation
     if not verifyKey():
         sys.exit()
         
     virtualDevice = BAC0.lite(deviceId=device_Id, port=port_Id, ip=IP_address)
     time.sleep(1)
+
+    # Set the device name
+    virtualDevice.this_application.localDevice.objectName = "JCI Weather Fetch"
+    # Set the device description
+    virtualDevice.this_application.localDevice.description = "API BACnet weather fetch device"
+    # Set Email for device
+    virtualDevice.this_application.localDevice.vendorName = "JCI Australia"
+    # change device location
+    virtualDevice.this_application.localDevice.location = "Sydney, New South Wales, Australia"
+    # change model Name
+    virtualDevice.this_application.localDevice.modelName = "Version 1.0"
 
     # Analog Value creation for BACnet device
     # Instance numbers 1-99 are allocated to OpenWeatherMap API
@@ -1297,6 +1321,36 @@ def start_device(device_Id, port_Id): #IP_address
         presentValue=BOMminimum_enthalpy,
         properties={"units":"kilojoulesPerKilogram"}
     )
+    _new_objects = analog_value(
+        instance=9000,
+        name="Hour",
+        description="Hour at last pole",
+        presentValue=hour
+    )
+    _new_objects=analog_value(
+        instance=9001,
+        name="Minute",
+        description="Minute at last pole",
+        presentValue=minute
+    )
+    _new_objects=analog_value(
+        instance=9002,
+        name="Date",
+        description="Date at last pole",
+        presentValue=date
+    )
+    _new_objects=analog_value(
+        instance=9003,
+        name="Month",
+        description="Month at last pole",
+        presentValue=month
+    )
+    _new_objects=analog_value(
+        instance=9004,
+        name="Year",
+        description="Year at last pole",
+        presentValue=year
+    )
 
     _new_objects.add_objects_to_application(virtualDevice)
     return virtualDevice
@@ -1304,7 +1358,7 @@ def start_device(device_Id, port_Id): #IP_address
 try:
     # reading the xml weather data and updating the internal variables of the BACnet device
     readXMLSettings()
-    bacnet_device = start_device(device_Id, port_Id) #IP_address
+    bacnet_device = start_device(device_Id, port_Id, IP_address) #IP_address
     # run an infinite loop that updates current weather values
     while True:
     # Code below will update the weather data stored inside the BACnet device every 31 minutes
@@ -1358,6 +1412,13 @@ try:
         bacnet_device["Open Weather Map Maximum Humidity 24H"].presentValue=max_humidity
         bacnet_device["Open Weather Map Maximum Enthalpy 24H"].presentValue=maximumEnthalpy
         bacnet_device["Open Weather Map Maximum Dew Point 24H"].presentValue=maximumDewPt
+
+    # update date, month, year and time points
+        bacnet_device["Hour"].presentValue=hour
+        bacnet_device["Minute"].presentValue=minute
+        bacnet_device["Date"].presentValue=date
+        bacnet_device["Month"].presentValue=month
+        bacnet_device["Year"].presentValue=year
 
         ################################################
         # start of Open Meteo (BOM) data updating points
