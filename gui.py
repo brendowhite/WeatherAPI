@@ -18,6 +18,7 @@ import matplotlib.pyplot as plt
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 import uuid
 from tkinter import PhotoImage
+import platform
 
 ########################### GUI FUNCTIONALITY ################################
 
@@ -1045,7 +1046,6 @@ class Page1(Page):
         # Set the entry box text and make it uneditable
         api2_entry.insert(0, "No API Key Required")
         api2_entry.config(state='disabled')
-
         api2_label.grid(row=6, column=0, sticky="w")
         api2_key_label.grid(row=6, column=2)
         api2_entry.grid(row=6, column=3, sticky='w')
@@ -1056,9 +1056,12 @@ class Page1(Page):
 
         # Row 8 widgets (Start and Stop buttons)
         start_button = tk.Button(self, text="Confirm\nConfiguration", width=15, height=3, bg="green", command=(submit_form))
-        stop_button = tk.Button(self, text="STOP", width=7, height=3, bg="red", command=stopProgram)
+        stop_button = tk.Button(self, text="Close GUI", width=15, height=3, bg="red", command=stopProgram)
         start_button.grid(row=8, column=1, pady=(60,0))
         stop_button.grid(row=8, column=3, pady=(60,0))
+        
+        help_label = tk.Label(self, text="Press F1 for Help")
+        help_label.grid(row=9, column=0, pady=(80,0))
 
 # open weather table tab 
 class Page2(Page):
@@ -1611,15 +1614,29 @@ class MainView(tk.Frame):
         # Start updating the time
         update_time()
 
+# Bind the F1 key to the open_pdf function
+        self.bind_all('<F1>', self.openManual)
 
-
+    def openManual(self, event=None):
+        pdf_path = "./nssm-2.24/Virtual BACnet Weather Fetching Device Documentation.pdf"
+    
+    # Convert to absolute path
+        abs_pdf_path = os.path.abspath(pdf_path)
+    
+    # Check if the file exists
+        if not os.path.exists(abs_pdf_path):
+            print(f"File not found: {abs_pdf_path}")
+            return
+    
+        if platform.system() == 'Windows':
+            os.startfile(abs_pdf_path)
 
     # Opens GUI window, configures size and front page widget packing
 root = tk.Tk()
 main_view = MainView(root)  # Create an instance of your MainView
 main_view.pack(side="top", fill="both", expand=True)
 root.geometry("700x500")
-root.title("Weather API Fetching Virtual BACnet Device (V1.0)")
+root.title("JCI Weather Fetch")
 root.resizable(False, False)
 
 # # Load the icon image
